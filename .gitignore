@@ -4,6 +4,8 @@
 *.pgn
 *.xml
 
+!scalachessgui.jar
+
 !/guidescriptors/main.xml
 !/guidescriptors/defaults.xml
 !/guidescriptors/editpgn.xml
