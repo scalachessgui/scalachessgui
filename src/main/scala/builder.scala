@@ -187,7 +187,14 @@ object Builder
 		values=Data.loadXML(dpath("values"))
 
 		values=Data.loadPatchXML(values,dpath("defaults"))
-		values=Data.loadPatchXML(values,dpath("personal"))
+		if(new File("guidescriptors"+File.separator+"personal.xml").exists())
+		{
+			values=Data.loadPatchXML(values,dpath("personal"))
+		}
+		else
+		{
+			println("personal settings missing")
+		}
 	}
 
 	def shutdown
