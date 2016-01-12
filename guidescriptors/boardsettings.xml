@@ -1,0 +1,43 @@
+<vbox style="-fx-background-color: #dfdfff;" padding="5">
+	<vbox style="-fx-border-color: #9f9fff; -fx-border-style: solid; -fx-border-width: 2px; -fx-border-radius: 20px;" padding="5">
+		<vbox gap="10" padding="10">
+			<hbox gap="5">
+				<combo profile="boardprofile" action="select" id="boardprofileselect"/>
+				<textfield profile="boardprofile" action="name" id="nameboardprofile"/>
+				<button profile="boardprofile" action="add" id="addboardprofile" text="Add"/>
+				<button profile="boardprofile" action="del" id="delboardprofile" text="Del"/>
+				<button profile="boardprofile" action="apply" id="applyboardprofile" text="Apply"/>
+			</hbox>
+			<grid hgap="5" vgap="5">
+			
+				<label r="1" c="1" text="Board material"/>
+				<combo r="1" c="2" profile="boardprofile" id="material"/>				
+				<label r="1" c="3"  text="Show coordinates"/>
+				<checkbox r="1" c="4" cs="3" profile="boardprofile" id="showcoords"/>
+				
+				<label r="2" c="1" text="White piece"/>
+				<colorpicker r="2" c="2" profile="boardprofile" id="whitepiececolor"/>				
+				<label r="2" c="3" text="Black piece"/>
+				<colorpicker r="2" c="4" profile="boardprofile" id="blackpiececolor"/>
+				
+				<label r="3" c="1" text="Light square"/>
+				<colorpicker r="3" c="2" profile="boardprofile" id="lightsquarecolor"/>
+				<label r="3" c="3" text="Dark square"/>
+				<colorpicker r="3" c="4" profile="boardprofile" id="darksquarecolor"/>
+				
+				<label r="4" c="1" text="Board size"/>
+				<slider r="4" c="2" cs="3"  profile="boardprofile" id="boardsize" min="300.0" max="600.0" majortickunit="50" showticklabels="true"/>
+				
+				<label r="5" c="1"  text="Board opacity"/>
+				<slider r="5" c="2" cs="3" profile="boardprofile" id="boardopacity" min="0.0" max="1.0" majortickunit="0.1" showticklabels="true"/>
+				
+				<label r="6" c="1"  text="Chess font"/>
+				<combo id="chessfont" profile="boardprofile" r="6" c="2"/>
+				
+				<label r="7" c="1"  text="Board margin"/>
+				<slider r="7" c="2" cs="3" profile="boardprofile" id="boardmargin" min="0.0" max="50.0" majortickunit="5.0" showticklabels="true"/>
+				
+			</grid>
+		</vbox>
+	</vbox>
+</vbox>

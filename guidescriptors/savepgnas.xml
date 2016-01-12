@@ -1,0 +1,12 @@
+<vbox padding="5" gap="5">
+	<hbox gap="5">
+		<label text="File name:"/>
+		<textfield id="savepgnasname" style="-fx-font-size: 24px;" width="300"/>
+	</hbox>
+	<button id="dosavepgnas" width="400" height="50" text="Save"/>
+	<label text="Directory:"/>
+	<hbox padding="5" gap="5">
+		<textarea id="savepgnasdir" style="monotext" width="400" height="100"/>
+		<button id="selectpgnsaveasdir" text="Select directory"/>
+	</hbox>
+</vbox>

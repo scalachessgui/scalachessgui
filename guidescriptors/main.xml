@@ -1,0 +1,135 @@
+<vbox id="mainvbox" padding="5">
+	<vbox gap="5">
+		<menubar>
+			<menu text="Copy">
+				<menuitem id="copyfen" text="FEN"></menuitem>
+				<menuitem id="copypgn" text="PGN"></menuitem>
+				<menuitem id="copycurrentline" text="Current line"></menuitem>
+			</menu>
+			<menu text="Paste">
+				<menuitem id="pastefen" text="FEN"></menuitem>
+				<menuitem id="pastepgn" text="PGN"></menuitem>
+			</menu>
+			<menu text="Engine">
+				<menuitem id="loadengine" text="Load"></menuitem>
+			</menu>
+			<menu text="PGN">
+				<menuitem id="openpgn" text="Open"></menuitem>
+				<menuitem id="savepgnas" text="Save as"></menuitem>
+				<menuitem id="openmultpgn" text="Open multiple games"></menuitem>
+			</menu>
+			<menu text="Settings">
+				<menuitem id="setupboard" text="Setup board position manually"></menuitem>
+				<menuitem id="boardsettings" text="Board settings"></menuitem>
+			</menu>
+		</menubar>
+		<hbox gap="5">
+		
+			<vbox>
+			
+				<vbox id="boardvbox"/>
+				
+				<label id="boardfenlabel"/>
+				
+				<hbox id="boardcontrolpanelhbox" bimage="control.jpg" cover="false" gap="3" padding="5">
+					<button id="boardcontrolpanelflip" img="icons/flip.png" style="round"/>
+					<button id="boardcontrolpanelreset" img="icons/resett.png" style="round"/>
+					<button id="boardcontrolpaneltobegin" img="icons/begint.png" style="round"/>
+					<button id="boardcontrolpanelback" img="icons/backt.png" style="round"/>
+					<button id="boardcontrolpanelforward" img="icons/forwardt.png" style="round"/>
+					<button id="boardcontrolpaneltoend" img="icons/endt.png" style="round"/>
+					<button id="boardcontrolpaneldel" img="icons/delt.png" style="round"/>
+					<button id="boardcontrolpanelstart" img="icons/startt.png" style="round"/>
+					<button id="boardcontrolpanelstop" img="icons/stopt.png" style="round"/>
+					<button id="boardcontrolpanelmake" img="icons/maket.png" style="round"/>
+					<vbox id="selectvariantvbox" padding="2" style="-fx-border-width: 1px;"/>
+				</hbox>
+				
+				<vbox padding="5">
+					<combo id="selectvariantcombo"/>
+				</vbox>
+				
+			</vbox>
+			
+			<tabpane id="tabs">
+			
+				<tab caption="Color PGN">
+					<vbox padding="5" gap="5">
+						<scrollpane id="colorpgnscrollpane" width="$panewidth">
+							<webview id="colorpgntext" height="1950.0" width="$innerpanewidth"/>
+						</scrollpane>
+					</vbox>
+				</tab>
+			
+				<tab caption="PGN">
+					<vbox padding="5" gap="5">
+						<scrollpane id="pgnscrollpane" width="$panewidth">
+							<textarea id="pgntext" wrap="true" style="monotext" height="1950.0" width="$innerpanewidth"/>
+						</scrollpane>
+					</vbox>
+				</tab>
+				
+				<tab caption="Moves">
+					<vbox padding="5" gap="5">
+						<scrollpane id="movescrollpane" width="$panewidth">
+							<webview id="movetext" height="1950.0" width="$innerpanewidth"/>
+						</scrollpane>
+					</vbox>
+				</tab>
+				
+				<tab caption="Engine">
+					<vbox padding="5" gap="5">
+						<hbox padding="5" gap="5">
+							<label text="MultiPV"/>
+							<combo id="multipvcombo"/>
+						</hbox>
+						<scrollpane id="enginescrollpane" width="$panewidth">
+							<webview id="enginetext" height="1950.0" width="$innerpanewidth"/>
+						</scrollpane>
+					</vbox>
+				</tab>
+				
+				<tab caption="Book">
+					<vbox padding="5" gap="5">
+						<hbox padding="5" gap="5">
+							<vbox id="currentbookvbox" padding="5"></vbox>
+							<hbox padding="5" gap="10">
+								<button id="addmove" text="+"/>
+								<label text="Book enabled:"/>
+								<checkbox id="bookenabled"/>
+							</hbox>
+						</hbox>
+						<scrollpane id="bookscrollpane" width="$panewidth">
+							<webview id="booktext" height="2000" width="2000"/>
+						</scrollpane>
+					</vbox>
+				</tab>
+			
+				<tab caption="Build">
+					<vbox  padding="15" gap="5">
+						<button id="selectbuildpgn" style="round" text="Select PGN"/>
+						<label text="Selected PGN:"/>
+						<label style="-fx-font-size: 18px; -fx-text-fill: #007f00;" id="selectedbuildpgn"/>
+						<label text="Build in book:"/>
+						<textfield style="-fx-font-size: 18px; -fx-text-fill: #00007f;" id="buildinbook"/>
+						<hbox gap="5">
+							<label text="Cut build at move:"/>
+							<vbox id="cutbuildat"/>
+						</hbox>
+						<button id="sortbyvariants" style="round" text="Sort by variants"/>
+						<button id="buildpgn" style="round" img="icons/maket.png" text="Build"/>
+					</vbox>
+				</tab>
+			
+				<tab caption="Games">
+					<vbox id="bookgamebrowservbox" padding="5"/>
+				</tab>
+				
+				<tab caption="PGN Games">
+					<vbox id="pgngamebrowservbox" padding="5"/>
+				</tab>
+				
+			</tabpane>
+		</hbox>
+	</vbox>
+</vbox>

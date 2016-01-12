@@ -1,0 +1,5 @@
+<vbox style="-fx-background-color: #dfdfff;" padding="5">
+	<vbox style="-fx-border-color: #9f9fff; -fx-border-style: solid; -fx-border-width: 2px; -fx-border-radius: 20px;" padding="5">
+		<vbox id="setupboardvbox" padding="5"/>
+	</vbox>
+</vbox>

@@ -1,0 +1,8 @@
+<vbox padding="5" gap="5">
+	<label text="Field:"/>
+	<textfield id="pgnfieldname" width="400"/>
+	<label text="Value:"/>
+	<textfield id="pgnfieldvalue" width="400"/>
+	<button id="editpgnok" text="Apply changes"/>
+	<button id="editpgndel" text="Delete this field"/>
+</vbox>

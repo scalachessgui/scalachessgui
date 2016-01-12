@@ -1,0 +1,4 @@
+<vbox padding="5" gap="5">
+	<textarea id="message" style="monotext" wrap="true" width="400" height="100" text=""/>
+	<button id="messageok" text="Ok"/>
+</vbox>

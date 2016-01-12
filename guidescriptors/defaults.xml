@@ -1,0 +1,90 @@
+<patches>
+
+	<m p="stages#main">
+		<m>
+			<v key="x">10</v>
+			<v key="y">10</v>
+		</m>
+	</m>
+	
+	<m p="settings#panewidth">
+		<v>750.0</v>
+	</m>
+	
+	<m p="settings#boardsize">
+		<v>450.0</v>
+	</m>
+	
+	<m p="settings#boardopacity">
+		<v>0.15</v>
+	</m>
+	
+	<m p="settings#boardmargin">
+		<v>30.0</v>
+	</m>
+	
+	<m p="settings#showcoords">
+		<v>true</v>
+	</m>
+	
+	<m p="settings#whitepiececolor">
+		<v>#FFFFFF</v>
+	</m>
+	
+	<m p="settings#blackpiececolor">
+		<v>#000000</v>
+	</m>
+	
+	<m p="settings#lightsquarecolor">
+		<v>#CCCC33</v>
+	</m>
+	
+	<m p="settings#darksquarecolor">
+		<v>#666600</v>
+	</m>
+	
+	<m p="settings#material">
+		<m>
+			<l key="items">
+				<v>wood</v>
+				<v>marble</v>
+				<v>rock</v>
+			</l>
+			<v key="selected">wood</v>
+		</m>
+	</m>
+	
+	<m p="settings#chessfont">
+		<m>
+			<l key="items">
+				<v>MERIFONTNEW.TTF</v>
+				<v>CASEFONT.TTF</v>
+				<v>LUCEFONT.TTF</v>
+				<v>MARRFONT.TTF</v>
+				<v>AVENFONT.TTF</v>
+			</l>
+			
+			<v key="selected">MERIFONTNEW.TTF</v>
+		</m>
+	</m>
+	
+	<m p="components#bookenabled">
+		<v>true</v>
+	</m>
+	
+	<m p="components#multipvcombo">
+		<m>
+			<l key="items">
+				<v>1</v>
+				<v>2</v>
+				<v>3</v>
+				<v>5</v>
+				<v>10</v>
+				<v>20</v>
+				<v>100</v>
+			</l>
+			<v key="selected">3</v>
+		</m>
+	</m>
+
+</patches>
