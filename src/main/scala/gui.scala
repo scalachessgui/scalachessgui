@@ -1023,6 +1023,15 @@ class GuiClass extends Application
 
 			gb.draw_board
 
+			gb.clear_highlight
+			if(commands.g.current_node!=commands.g.root)
+			{
+				val dummy=new board
+				dummy.set_from_fen(commands.g.current_node.parent.fen)
+				val m=dummy.sanToMove(commands.g.current_node.genSan)
+				if(m!=null) gb.highlight_move(m)
+			}
+
 			Builder.getcomp("boardfenlabel").asInstanceOf[Builder.MyLabel].setText(fen)
 		}
 
