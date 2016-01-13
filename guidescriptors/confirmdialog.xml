@@ -1,7 +1,7 @@
 <vbox padding="5" gap="5" width="400">
 	<label id="message" text=""/>
-	<hbox padding="5" gap="5">
-		<button id="confirmyes" text="Yes"/>
+	<vbox padding="5" gap="5">
+		<button id="confirmyes" width="380" height="50" text="Yes"/>
 		<button id="confirmno" text="No"/>
-	</hbox>
+	</vbox>
 </vbox>
