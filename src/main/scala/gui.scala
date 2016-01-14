@@ -30,7 +30,6 @@ import builder._
 import guiboard._
 import commands._
 import board._
-import movetable._
 import square._
 import move._
 import settings._
@@ -928,24 +927,18 @@ class GuiClass extends Application
 
 	def get_selected_variant:String=Builder.getcombo("selectvariantcombo").get_selected
 
-	def variant_selected(v:String=get_selected_variant)
+	def variant_changed
 	{
-		val running=engine.engine_running
-		
-		if(running)
-		{
-			Builder.setcval("message","Variant cannot be changed while engine is running.")
-			Builder.MyStage("infodialog",modal=true,set_handler=handler,title="Warning")
-			return
-		}
-
-		movetable.init(v)
-		
-		commands.exec(s"v $v")
-
 		update
 
 		load_current_engine
+	}
+
+	def variant_selected(v:String=get_selected_variant)
+	{		
+		commands.exec(s"v $v")
+
+		variant_changed
 	}
 
 	def getboardsize:Double=Builder.gsd("boardsize",400.0)
@@ -1108,7 +1101,7 @@ class GuiClass extends Application
 
 		Builder.startup
 
-		settings.load
+		commands.startup
 
 		///////////////////////////////////////////////////
 
@@ -1118,13 +1111,11 @@ class GuiClass extends Application
 
 		build_browsers
 
+		build_board
+
 		///////////////////////////////////////////////////
 
-		variant_selected()
-
-		commands.startup
-
-		build_board
+		variant_changed
 	}
 
 	override def stop()

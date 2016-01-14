@@ -11,6 +11,7 @@ import utils.ClipboardSimple._
 import game._
 import book._
 import settings._
+import movetable._
 
 import scala.io.StdIn.readLine
 
@@ -26,9 +27,9 @@ object commands
 	def startup
 	{
 
-		movetable
-
 		settings.load
+
+		exec("v "+settings.getvariant)
 
 		g.from_pgn_and_current_line(settings.game_pgn,settings.game_current_line)
 
@@ -131,7 +132,9 @@ object commands
 		}
 		else if(command=="v")
 		{
-			result=settings.set_variant(rest)
+			val v=rest
+			movetable.init(v)
+			result=settings.set_variant(v)
 			g.reset
 			val current_book=settings.get_current_book()
 			exec("scb "+current_book)
