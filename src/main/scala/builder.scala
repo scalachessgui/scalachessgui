@@ -220,6 +220,13 @@ object Builder
 		null
 	}
 
+	def getvboxn(id:String):VBox=
+	{
+		val vbox=getvbox(id)
+		if(vbox==null) return null
+		vbox.node.asInstanceOf[VBox]
+	}
+
 	def getcombo(id:String):MyCombo=
 	{
 		val comp=getcomp(id)

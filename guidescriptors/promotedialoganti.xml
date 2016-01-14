@@ -1,0 +1,10 @@
+<vbox padding="5" gap="5" width="400">
+	<label text="Select promotion piece:"/>
+	<hbox padding="5" gap="5">
+		<button id="promqueen" text="Queen"/>
+		<button id="promrook" text="Rook"/>
+		<button id="prombishop" text="Bishop"/>
+		<button id="promknight" text="Knight"/>
+		<button id="promking" text="King"/>
+	</hbox>
+</vbox>

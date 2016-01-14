@@ -1105,6 +1105,10 @@ class board
 
 		// look at castling
 
+		// no castling in Antichess
+
+		if(variant=="Antichess") return false
+
 		val ksq=whereIsKing()
 
 		// no king no castle

@@ -257,33 +257,42 @@ class guiboard(
                                 if(is_legal(m))
                                 {
 
+                                	val dialog=if(settings.variant=="Antichess") "promotedialoganti" else "promotedialog"
+
                                 	def handler(ev:builder.MyEvent)
                                 	{
                                 		if(ev.id=="promqueen")
                                 		{
                                 			m.prom_piece=fromFenChar('q')
-                                			Builder.closeStage("promotedialog")
+                                			Builder.closeStage(dialog)
                                 			manual_move_made(m)
                                 		}
 
                                 		if(ev.id=="promrook")
                                 		{
                                 			m.prom_piece=fromFenChar('r')
-                                			Builder.closeStage("promotedialog")
+                                			Builder.closeStage(dialog)
                                 			manual_move_made(m)
                                 		}
 
                                 		if(ev.id=="prombishop")
                                 		{
                                 			m.prom_piece=fromFenChar('b')
-                                			Builder.closeStage("promotedialog")
+                                			Builder.closeStage(dialog)
                                 			manual_move_made(m)
                                 		}
 
                                 		if(ev.id=="promknight")
                                 		{
                                 			m.prom_piece=fromFenChar('n')
-                                			Builder.closeStage("promotedialog")
+                                			Builder.closeStage(dialog)
+                                			manual_move_made(m)
+                                		}
+
+                                		if(ev.id=="promking")
+                                		{
+                                			m.prom_piece=fromFenChar('k')
+                                			Builder.closeStage(dialog)
                                 			manual_move_made(m)
                                 		}
                                 	}
@@ -294,7 +303,7 @@ class guiboard(
                                 		piece_cx(fileOf(drag_to))+piece_size/5,piece_cy(rankOf(drag_to))-piece_size/10,
                              			PIECE_COLORS(b.turn),new Font(piece_size),force_text="?")
 
-                                    Builder.MyStage("promotedialog",set_handler=handler,unclosable=true,title="Promotion")
+                                    Builder.MyStage(dialog,set_handler=handler,unclosable=true,title="Promotion")
 
                                 }
                             }

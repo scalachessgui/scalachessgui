@@ -1,5 +1,5 @@
 
-del guidescriptors\values.xml
+rem del guidescriptors\values.xml
 
 call rda pgns
 call rda book

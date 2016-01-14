@@ -938,9 +938,13 @@ class GuiClass extends Application
 			Builder.MyStage("infodialog",modal=true,set_handler=handler,title="Warning")
 			return
 		}
+
+		movetable.init(v)
 		
 		commands.exec(s"v $v")
+
 		update
+
 		load_current_engine
 	}
 
@@ -957,7 +961,7 @@ class GuiClass extends Application
 
 	def build_board
 	{
-		val boardvbox=Builder.getcomp("boardvbox")
+		val boardvbox=Builder.getvboxn("boardvbox")
 
 		if(boardvbox!=null)
 		{
@@ -966,11 +970,9 @@ class GuiClass extends Application
 
 			gb.manual_move_made_callback=manual_move_made
 
-			val vbox=boardvbox.node.asInstanceOf[VBox]
+			boardvbox.getChildren().clear()
 
-			vbox.getChildren().clear()
-
-			vbox.getChildren().add(gb.rooth)
+			boardvbox.getChildren().add(gb.rooth)
 
 			val ms=Builder.stages("main").s
 			ms.setHeight(getboardcanvassize+180.0)
@@ -994,6 +996,12 @@ class GuiClass extends Application
 				gamebrowser.setStep(GAMES_STEP)
 			}
 
+			val buildcutoffvbox=Builder.getvboxn("cutbuildat")
+
+			val select_cut_combo=new components.MyCombo(List("1","2","3","4","5","6","7","8","9","10","15","20","25","30","35","40","45","50","100","200"),"buildcutoff",(String)=>{})
+			
+			buildcutoffvbox.getChildren().add(select_cut_combo.n)
+
 			update
 		}
 	}
@@ -1013,10 +1021,11 @@ class GuiClass extends Application
 
 	def update
 	{
-		val fen=commands.g.report_fen
-
 		if(gb!=null)
 		{
+
+			val fen=commands.g.report_fen
+
 			gb.set_from_fen(fen)
 
 			gb.flip=settings.flip
@@ -1029,31 +1038,36 @@ class GuiClass extends Application
 				val dummy=new board
 				dummy.set_from_fen(commands.g.current_node.parent.fen)
 				val m=dummy.sanToMove(commands.g.current_node.genSan)
-				if(m!=null) gb.highlight_move(m)
+				if(m!=null)
+				{
+					val ram=dummy.toRealAlgebMove(m)
+					gb.highlight_move(ram)
+				}
 			}
 
 			Builder.getcomp("boardfenlabel").asInstanceOf[Builder.MyLabel].setText(fen)
-		}
 
-		Builder.setweb("colorpgntext",commands.g.report_pgn_html(commands.g.current_node))
+			Builder.setweb("colorpgntext",commands.g.report_pgn_html(commands.g.current_node))
 
-		Builder.getcomp("pgntext").asInstanceOf[Builder.MyTextArea].setText(commands.g.report_pgn)
+			Builder.getcomp("pgntext").asInstanceOf[Builder.MyTextArea].setText(commands.g.report_pgn)
 
-		Builder.setweb("movetext",commands.g.b.genPrintableMoveList(html=true))
+			Builder.setweb("movetext",commands.g.b.genPrintableMoveList(html=true))
 
-		update_book_text
+			update_book_text
 
-		if(engine.engine_running)
-		{
-			engine.stop()
-			engine.fen=fen
-			engine.go()
-		}
+			if(engine.engine_running)
+			{
+				engine.stop()
+				engine.fen=fen
+				engine.go()
+			}
 
-		if(!engine.engine_running)
-		{
-			gb.clear_engine
-			gb.clear_score
+			if(!engine.engine_running)
+			{
+				gb.clear_engine
+				gb.clear_score
+			}
+
 		}
 	}
 
@@ -1088,15 +1102,15 @@ class GuiClass extends Application
 
 	override def start(set_primaryStage: Stage)
 	{
-		movetable
-
 		gui2.Board.init_move_table
 
 		Builder.eval_exp_callback=eval_exp
 
 		Builder.startup
 
-		commands.startup
+		settings.load
+
+		///////////////////////////////////////////////////
 
 		init_variantcombo_data
 
@@ -1104,9 +1118,13 @@ class GuiClass extends Application
 
 		build_browsers
 
-		build_board
+		///////////////////////////////////////////////////
 
 		variant_selected()
+
+		commands.startup
+
+		build_board
 	}
 
 	override def stop()
