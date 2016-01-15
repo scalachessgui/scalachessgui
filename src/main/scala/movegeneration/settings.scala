@@ -20,7 +20,8 @@ object settings
 			"Antichess",
 			"Horde",
 			"From Position",
-			"Three-check"
+			"Three-check",
+			"Racing Kings"
 		)
 
 	val ANNOTATIONS=List("!!","!","!?","-","?!","?","??")

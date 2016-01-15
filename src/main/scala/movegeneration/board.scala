@@ -28,6 +28,7 @@ object board
 		return "position status unknown"
 	}
 
+	var RACING_KINGS_START_FEN="8/8/8/8/8/8/krbnNBRK/qrbnNBRQ w - - 0 1"
 	var STANDARD_START_FEN="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 	var HORDE_START_FEN="rnbqkbnr/pppppppp/8/1PP2PP1/PPPPPPPP/PPPPPPPP/PPPPPPPP/PPPPPPPP w kq - 0 1"
 
@@ -114,6 +115,7 @@ object board
 
 	def start_fen:String=
 	{
+		if(variant=="Racing Kings") return RACING_KINGS_START_FEN
 		if(variant=="Horde") return HORDE_START_FEN
 		if(variant=="Chess960") return gen_chess_960_fen
 		// default
@@ -762,6 +764,37 @@ class board
 	def isInGlobalCheck(c:TColor):Boolean=
 	{
 
+		if(variant=="Racing Kings")
+		{
+			val oksq=whereIsKing(inverseColorOf(c))
+
+			if(rankOf(oksq)!=0) return false
+
+			val ksq=whereIsKing(c)
+
+			val r=rankOf(ksq)
+
+			if(r>1) return true
+
+			if(r==0) return false
+
+			val f=fileOf(ksq)
+
+			for(i<- -1 to 1)
+			{
+				val tf=f+i
+
+				if(fileOk(tf))
+				{
+					val testsq=fromFileRank(tf,0)
+
+					if(!isInCheckSq(testsq,allow_global=false)) return false
+				}
+			}
+
+			return true
+		}
+
 		if(variant=="Horde")
 		{
 			if(!hasMaterial(c)) return true
@@ -794,10 +827,15 @@ class board
 		false
 	}
 
-	def isInCheckSqCol(sq:TSquare,c:TColor):Boolean=
+	def isInCheckSqCol(sq:TSquare,c:TColor,allow_global:Boolean=true):Boolean=
 	{
 
-		if(isInGlobalCheck(c)) return true
+		if(allow_global)
+		{
+
+			if(isInGlobalCheck(c)) return true
+
+		}
 
 		if(variant=="Antichess") return false
 
@@ -868,11 +906,11 @@ class board
 		return false
 	}
 
-	def isInCheckSq(sq:TSquare):Boolean=isInCheckSqCol(sq,turn)
+	def isInCheckSq(sq:TSquare,allow_global:Boolean=true):Boolean=isInCheckSqCol(sq,turn,allow_global)
 
-	def isInCheckCol(c:TColor):Boolean=
+	def isInCheckCol(c:TColor,allow_global:Boolean=true):Boolean=
 	{
-		isInCheckSqCol(whereIsKing(c),c)
+		isInCheckSqCol(whereIsKing(c),c,allow_global)
 	}
 
 	def isInCheck:Boolean=
@@ -968,6 +1006,18 @@ class board
 
 	def nextLegalMove:Boolean=
 	{
+
+		if(variant=="Racing Kings")
+		{
+			val wksq=whereIsKing(WHITE)
+			val rw=rankOf(wksq)
+
+			val bksq=whereIsKing(BLACK)
+			val rb=rankOf(bksq)
+
+			if((rw==0)&&(rb==0)) return false
+		}
+
 		while(nextMove)
 		{
 			val dummy=this.cclone
@@ -975,6 +1025,7 @@ class board
 			dummy.makeMove(current_move)
 
 			val meincheck=dummy.isInCheckCol(turn)
+			val oppinlocalcheck=dummy.isInCheckCol(inverseTurnOf(turn),allow_global=false)
 
 			if(variant=="Antichess")
 			{
@@ -988,7 +1039,17 @@ class board
 			}
 			else
 			{
-				if(!meincheck) return true
+				if(!meincheck)
+				{
+					if(variant=="Racing Kings")
+					{
+						if(!oppinlocalcheck) return true
+					}
+					else
+					{
+						return true
+					}
+				}
 
 				if(variant=="Atomic")
 				{
