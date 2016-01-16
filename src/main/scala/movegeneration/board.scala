@@ -621,6 +621,17 @@ class board
 		sqs
 	}
 
+	def isSqFree(sq:TSquare,c:TColor=getturn):Boolean=
+	{
+		val p=rep(sq)
+
+		if(p==NO_PIECE) return true
+
+		if(colorOf(p)==inverseColorOf(c)) return true
+
+		false
+	}
+
 	def isSqKingAdj(sq:TSquare,c:TColor):Boolean=
 	{
 		val testking=toColor(KING,c)
@@ -788,7 +799,11 @@ class board
 				{
 					val testsq=fromFileRank(tf,0)
 
-					if(!isInCheckSq(testsq,allow_global=false)) return false
+					if(
+						(!isInCheckSq(testsq,allow_global=false))
+						&&
+						(isSqFree(testsq))
+					) return false
 				}
 			}
 

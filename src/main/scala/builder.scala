@@ -342,6 +342,11 @@ object Builder
 		Data.get(values,ppath(profileid,name,id))
 	}
 
+	def gps(profileid:String,name:String,id:String,default:String=""):String=
+	{
+		gs(ppath(profileid,name,id),default)
+	}
+
 	def getsval(id:String):Data=
 	{
 		Data.get(values,spath(id))

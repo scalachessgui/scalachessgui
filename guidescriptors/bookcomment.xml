@@ -1,0 +1,11 @@
+<vbox gap="10" padding="10">
+	<hbox gap="5">
+		<combo profile="bookcommentprofile" action="select" id="bookcommentprofileselect"/>
+		<textfield profile="bookcommentprofile" action="name" id="namebookcommentprofile"/>
+		<button profile="bookcommentprofile" action="add" id="addbookcommentprofile" text="Add"/>
+		<button profile="bookcommentprofile" action="del" id="delbookcommentprofile" text="Del"/>
+		<button profile="bookcommentprofile" action="apply" id="applybookcommentprofile" text="Apply"/>
+	</hbox>
+	<label text="Background color"/>
+	<colorpicker id="bookcommentbackgroundcolor" profile="bookcommentprofile"/>
+</vbox>

@@ -15,6 +15,8 @@ import scala.io.Source
 
 import org.apache.commons.io.FileUtils._
 
+import builder._
+
 object butils
 {
 
@@ -84,7 +86,8 @@ case class bookEntry(
 	var annot:String="",
 	var wins:Int=0,
 	var draws:Int=0,
-	var losses:Int=0
+	var losses:Int=0,
+	var comment:String="-"
 	)
 {
 	def toXml=
@@ -95,6 +98,7 @@ case class bookEntry(
 		<wins>{wins}</wins>
 		<draws>{draws}</draws>
 		<losses>{losses}</losses>
+		<comment>{comment}</comment>
 		</move>
 	}
 
@@ -103,10 +107,11 @@ case class bookEntry(
 		san=(move \ "@san").text
 
 		plays=parseXml[Int](move \ "plays",0)
-		annot=parseXml[String](move \ "annot","")
+		annot=parseXmlStr(move \ "annot","")
 		wins=parseXml[Int](move \ "wins",0)
 		draws=parseXml[Int](move \ "draws",0)
 		losses=parseXml[Int](move \ "losses",0)
+		comment=parseXmlStr(move \ "comment","-")
 	}
 }
 
@@ -160,6 +165,20 @@ case class bookPosition(
 		else
 		{
 			entries+=(san->bookEntry(san=san,annot=annot))
+		}
+	}
+
+	def comment(san:String,comment:String)
+	{
+		val col=Builder.gss("bookcommentbackgroundcolor")
+
+		if(entries.contains(san))
+		{
+			entries(san).comment=comment
+		}
+		else
+		{
+			entries+=(san->bookEntry(san=san,comment=comment))
 		}
 	}
 
@@ -264,6 +283,8 @@ case class bookPosition(
 			val wins=entries(k).wins
 			val draws=entries(k).draws
 			val losses=entries(k).losses
+			val comment=entries(k).comment
+			val commentcol=Builder.gps("bookcommentprofile",comment,"bookcommentbackgroundcolor","#FFFFFF")
 
 			val col=settings.get_annot_color(annot)
 
@@ -278,7 +299,7 @@ case class bookPosition(
 			}).mkString("\n")
 
 			s"""
-				|<tr>
+				|<tr style="background-color: $commentcol;">
 				|<td align="center" onmousedown="setclick('$k','make','');">
 				|<a name="dummy"></a>
 				|<a href="#dummy" style="text-decoration: none;">
@@ -294,6 +315,7 @@ case class bookPosition(
 				|$td<font color="#7f0000" size="5"><b>$losses<b></font></td>
 				|$annots
 				|$td<font color="#ff0000" size="5" onmousedown="setclick('$k','del','');">X</font></td>
+				|$td<font color="#000000" size="5" onmousedown="setclick('$k','comment','');">$comment</font></td>
 				|</tr>
 			""".stripMargin
 			}).mkString("\n")
@@ -312,7 +334,7 @@ case class bookPosition(
 			|	param=setparam;
 			|}
 			|</script>
-			|<table border="0" cellpadding="3" cellspacing="3">
+			|<table border="0" cellpadding="3" cellspacing="3" style="border-collapse: collapse;">
 			|<tr>
 			|$td <i>move</i></td>
 			|$td <i>annot</i></td>
@@ -322,6 +344,7 @@ case class bookPosition(
 			|$td <i>black wins</i></td>
 			|<td align="center" colspan="$numannots"><i>annotate</i></td>
 			|<td align="center"><i>del</i></td>
+			|<td align="center"><i>comment</i></td>
 			|</tr>
 			|$items
 			|</table>

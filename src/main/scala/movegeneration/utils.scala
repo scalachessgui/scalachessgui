@@ -119,6 +119,22 @@ object Parse
 
     def parseXml[T: ParseOp](x: NodeSeq,d: T) = parse[T](x.text,d)
 
+    def parseXmlStr(x: NodeSeq,d: String):String=
+    {
+    	val t=x.text
+
+    	if(t!=null)
+    	{
+    		if(t!="") return t
+    	}
+    	else
+    	{
+    		return d
+    	}
+
+    	d
+    }
+
 	//////////////////////////////////////////////
 
 	def strip(content: String):String=

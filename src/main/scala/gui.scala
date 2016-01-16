@@ -412,7 +412,14 @@ class GuiClass extends Application
 			commands.exec(s"del $key")
 			update
 		}
+		else if(action=="comment")
+		{
+			commentedsan=key
+			Builder.MyStage("bookcomment",modal=true,set_handler=handler,title="Add book comment")			
+		}
 	}
+
+	var commentedsan:String=""
 
 	def handler(ev:MyEvent)
 	{
@@ -494,31 +501,7 @@ class GuiClass extends Application
 					}
 				}
 			}
-
-			/*if(ev.id=="booktext")
-			{
-
-				val key=get_book_html.executeScript("key").toString()
-				val action=get_book_html.executeScript("action").toString()
-				val param=get_book_html.executeScript("param").toString()
-
-				if(action=="annot")
-				{
-					exec(s"a $key $param")
-					update_book_text
-				}
-				else if(action=="make")
-				{
-					exec(s"m $key")
-					update
-				}
-				else if(action=="del")
-				{
-					exec(s"del $key")
-					update
-				}
-
-			}*/
+			
 		}
 
 		if(ev.kind=="menuitem clicked")
@@ -600,6 +583,20 @@ class GuiClass extends Application
 
 		if(ev.kind=="profile applied")
 		{
+			if(ev.id=="bookcommentprofile")
+			{
+				Builder.closeStage("bookcomment")
+				val sel=Builder.getcombo("bookcommentprofileselect").get_selected
+
+				if(sel!="")
+				{
+					commands.g.book.currentPos.comment(commentedsan,sel)
+					commands.g.book.savePos()
+
+					update
+				}
+			}
+
 			if(ev.id=="boardprofile")
 			{
 				build_board
