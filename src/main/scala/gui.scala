@@ -35,6 +35,7 @@ import move._
 import settings._
 import components._
 import book._
+import piece._
 
 import gui2.Engine
 
@@ -421,6 +422,63 @@ class GuiClass extends Application
 
 	var commentedsan:String=""
 
+	def gen_random(num:Int)
+	{
+		val r=new scala.util.Random()
+
+		var ok=true
+
+		while(ok)
+		{
+
+			var cnt=0
+
+			while((cnt< num)&&ok)
+			{
+
+				commands.g.b.genMoveList
+
+				val isforward=false
+
+				val move_list=(for(m<-commands.g.b.move_list if
+				(
+					((commands.g.b.turn==piece.WHITE)&&(square.rankOf(m.to)< square.rankOf(m.from)))
+					||
+					((commands.g.b.turn==piece.BLACK)&&(square.rankOf(m.to)> square.rankOf(m.from)))
+					||
+					(!isforward)
+				)) yield m).toList
+
+				val len=move_list.length
+
+				if(len>0)
+				{
+					
+					val i=r.nextInt(len)
+
+					val m=move_list(i)
+
+					commands.g.makeMove(m)
+
+					cnt+=1
+
+				}
+				else
+				{
+
+					ok=false
+
+				}
+
+			}
+
+			ok=false
+
+		}
+
+		update
+	}
+
 	def handler(ev:MyEvent)
 	{
 		Builder.default_handler(ev)
@@ -506,6 +564,15 @@ class GuiClass extends Application
 
 		if(ev.kind=="menuitem clicked")
 		{
+
+			val rmatch="""random([0-9]+)""".r
+
+			ev.id match
+			{				
+				case rmatch(num_halfmoves) => gen_random(num_halfmoves.toInt)
+
+				case _=>
+			}
 
 			if(ev.id=="openmultpgn")
 			{

@@ -22,6 +22,14 @@
 				<menuitem id="setupboard" text="Setup board position manually"></menuitem>
 				<menuitem id="boardsettings" text="Board settings"></menuitem>
 			</menu>
+			<menu text="Random">
+				<menuitem id="random20" text="Make 20 random halfmoves"></menuitem>
+				<menuitem id="random40" text="Make 40 random halfmoves"></menuitem>
+				<menuitem id="random80" text="Make 80 random halfmoves"></menuitem>
+				<menuitem id="random120" text="Make 120 random halfmoves"></menuitem>
+				<menuitem id="random160" text="Make 160 random halfmoves"></menuitem>
+				<menuitem id="random200" text="Make 200 random halfmoves"></menuitem>
+			</menu>
 		</menubar>
 		<hbox gap="5">
 		
