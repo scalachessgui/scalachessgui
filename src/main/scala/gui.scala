@@ -589,6 +589,11 @@ class GuiClass extends Application
 				open_pgn
 			}
 
+			if(ev.id=="enginesettings")
+			{
+				Builder.MyStage("engineoptions",modal=true,do_size=false,set_handler=handler,title="Engine settings")
+			}
+
 			if(ev.id=="savepgnas")
 			{
 				Builder.setcval("savepgnasdir",settings.pgn_dir)
@@ -672,6 +677,36 @@ class GuiClass extends Application
 
 		if(ev.kind=="button pressed")
 		{
+
+			val parts=ev.id.split("!").toList
+
+			if(parts.length==2)
+			{
+				if(parts(1)=="apply")
+				{
+					val id=parts(0)
+					var comp=Builder.getcomp(id)
+					if(comp==null) comp=Builder.getcomp(ev.id)
+					if(comp!=null)
+					{
+						if(comp.isInstanceOf[Builder.MyTextField])
+						{
+							Builder.setcval(id,comp.asInstanceOf[Builder.MyTextField].getText)
+						}
+						var value=Builder.getcvals(id,"")
+						if(comp.isInstanceOf[Builder.MySlider])
+						{
+							value=""+data.Utils.parse[Double](value,0.0).toInt
+						}
+						val idparts=id.split("#")
+						var name=idparts(0)
+						if(idparts.length>0) name=idparts(idparts.length-1)
+						val command=s"setoption name $name value $value"
+						println("engine command "+command)
+						engine.issue_command(command+"\n")
+					}
+				}
+			}
 
 			if(ev.id=="selectbuildpgn")
 			{
@@ -986,6 +1021,165 @@ class GuiClass extends Application
 	{
 		val engine_path=settings.get_variant_engine_path()
 		engine.load_engine(engine_path)
+
+		// uci
+
+		engine.engine_intro=true
+
+		engine.issue_command("uci\n")
+
+		while(engine.uci_puff.indexOf("uciok")<0)
+		{
+			Thread.sleep(100)
+		}
+
+		var options=Map[String,Map[String,String]]()
+
+		for(line<-engine.uci_puff.split("\r?\n").toList)
+		{
+			val parts=line.split(" ").toList
+			var name=""
+			val tokens=List("name","type","default","min","max")
+			if(parts(0)=="option")
+			{
+				var i=1
+				var buff=""
+				var currentkind=""
+				var option=Map[String,String]()
+				var name=""
+				while(i< parts.length)
+				{
+					val last=(i==(parts.length-1))
+					if((tokens.contains(parts(i)))||last)
+					{
+						if(currentkind!="")
+						{
+							if(last)
+							{
+								if(buff!="") buff+=" "
+								buff+=parts(i)
+							}
+							option+=(currentkind->buff)
+							if(currentkind=="name")
+							{
+								name=buff
+							}
+							buff=""
+						}
+						currentkind=parts(i)
+					}
+					else
+					{
+						if(buff!="") buff+=" "
+						buff+=parts(i)
+					}
+					i+=1
+				}
+				if(name!="")
+				{
+					options+=(name->option)
+				}
+			}
+		}
+
+		// construct xml file
+
+		var widgets=""
+		var r=1
+		for((name,option)<-options)
+		{
+			if(option.contains("type"))
+			{
+				val kind=option("type")
+				var widget=""
+				val id=s"enginesettings#$engine_path#$name"
+				val gr=s"""r="$r" c="2" """
+				if(kind=="check")
+				{
+					widget=s"""
+					|<checkbox $gr id="$id"/>
+					""".stripMargin
+				}
+				if((kind=="spin")&&(option.contains("min"))&&(option.contains("max")))
+				{
+					var min=option("min")
+					var max=option("max")
+					val minv=data.Utils.parse[Int](min,0)
+					val maxv=data.Utils.parse[Int](max,100)
+					var span=maxv-minv
+					if(minv==1) span+=1
+					var unit=1
+					if(span>10)
+					{
+						unit=span/10
+					}
+					widget=s"""
+					|<slider width="300.0" $gr id="$id" min="$min" max="$max" majortickunit="$unit" showticklabels="true"/>
+					""".stripMargin
+				}
+				if(kind=="button")
+				{
+					widget=s"""
+					|<button $gr text="$name" id="$id!apply"/>
+					""".stripMargin
+				}
+				if(kind=="string")
+				{
+					widget=s"""
+					|<textfield $gr id="$id"/>
+					""".stripMargin
+				}
+				if((widget!="")&&(name!="MultiPV"))
+				{
+					if(option.contains("default"))
+					{
+						if(Builder.getcval(id)==null)
+						{
+							Builder.setcval(id,option("default"))
+						}
+					}
+					var value=Builder.getcvals(id,"")
+					if(kind!="button")
+					{
+						if(kind=="spin")
+						{
+							value=""+data.Utils.parse[Double](value,0.0).toInt
+						}
+						val command=s"setoption name $name value $value"
+						println("engine command "+command)
+						engine.issue_command(command+"\n")
+					}
+					widgets+=s"""
+					|<label r="$r" c="1" text="$name"/>
+					|$widget
+					""".stripMargin
+					if(kind!="button")
+					{
+						widgets+=s"""
+						|<button r="$r" c="3" id="$id!apply" text="Apply"/>
+						"""
+					}
+					r+=1
+				}
+			}
+		}
+		var xml=s"""
+		|<vbox padding="5">
+		|<vbox padding="5" style="-fx-border-style: solid; -fx-border-width: 1px; -fx-border-radius: 10px;">
+		|<scrollpane height="500.0" width="800.0">
+		|<vbox padding="5" bimage="marble.jpg" cover="false">
+		|<grid vgap="5" hgap="5">
+		|$widgets
+		|</grid>
+		|</vbox>
+		|</scrollpane>
+		|</vbox>
+		|</vbox>
+		""".stripMargin
+		writeStringToFile(new File("guidescriptors"+File.separator+"engineoptions.xml"),xml)
+
+		// end uci
+
 		set_multipv(get_multipv)
 	}
 

@@ -58,9 +58,9 @@ public class Engine extends EngineLine
     private InputStream engine_in;
     private OutputStream engine_out;
     
-    Boolean engine_intro=true;
+    public Boolean engine_intro=true;
     
-    String uci_puff="";
+    public String uci_puff="";
     
     public Boolean engine_running=false;
 

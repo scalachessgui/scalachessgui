@@ -12,6 +12,7 @@
 			</menu>
 			<menu text="Engine">
 				<menuitem id="loadengine" text="Load"></menuitem>
+				<menuitem id="enginesettings" text="Settings"></menuitem>
 			</menu>
 			<menu text="PGN">
 				<menuitem id="openpgn" text="Open"></menuitem>
