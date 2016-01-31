@@ -1022,6 +1022,12 @@ class GuiClass extends Application
 		val engine_path=settings.get_variant_engine_path()
 		engine.load_engine(engine_path)
 
+		if(engine.uci_engine_path=="")
+		{
+			println("warning: engine could not be loaded")
+			return
+		}
+
 		// uci
 
 		engine.engine_intro=true

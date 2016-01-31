@@ -45,7 +45,7 @@ public class Engine extends EngineLine
     
     static Stage file_chooser_stage=new Stage();
     
-    String uci_engine_path;
+    public String uci_engine_path;
     
     
     private Runnable runnable_engine_read_thread;
