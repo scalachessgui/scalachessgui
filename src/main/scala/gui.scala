@@ -682,7 +682,8 @@ class GuiClass extends Application
 
 			if(parts.length==2)
 			{
-				if(parts(1)=="apply")
+				val action=parts(1)
+				if((action=="apply")||(action=="applyclose"))
 				{
 					val id=parts(0)
 					var comp=Builder.getcomp(id)
@@ -704,6 +705,10 @@ class GuiClass extends Application
 						val command=s"setoption name $name value $value"
 						println("engine command "+command)
 						engine.issue_command(command+"\n")
+						if(action=="applyclose")
+						{
+							Builder.stages("engineoptions").close
+						}
 					}
 				}
 			}
@@ -1125,8 +1130,11 @@ class GuiClass extends Application
 				}
 				if(kind=="button")
 				{
-					widget=s"""
-					|<button $gr text="$name" id="$id!apply"/>
+					widget=s"""					
+					|<hbox $gr>
+					|<button text="$name" id="$id!apply"/>
+					|<button text="$name and Close" id="$id!applyclose"/>
+					|</hbox>
 					""".stripMargin
 				}
 				if(kind=="string")
@@ -1163,6 +1171,7 @@ class GuiClass extends Application
 					{
 						widgets+=s"""
 						|<button r="$r" c="3" id="$id!apply" text="Apply"/>
+						|<button r="$r" c="4" id="$id!applyclose" text="Apply and Close"/>
 						"""
 					}
 					r+=1
