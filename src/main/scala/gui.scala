@@ -479,6 +479,11 @@ class GuiClass extends Application
 		update
 	}
 
+	def openenginesettings
+	{
+		Builder.MyStage("engineoptions",modal=true,do_size=false,set_handler=handler,title="Engine settings")
+	}
+
 	def handler(ev:MyEvent)
 	{
 		Builder.default_handler(ev)
@@ -591,7 +596,7 @@ class GuiClass extends Application
 
 			if(ev.id=="enginesettings")
 			{
-				Builder.MyStage("engineoptions",modal=true,do_size=false,set_handler=handler,title="Engine settings")
+				openenginesettings
 			}
 
 			if(ev.id=="savepgnas")
@@ -738,6 +743,11 @@ class GuiClass extends Application
 			if((ev.id=="addmove")&&(commands.g.book_enabled))
 			{
 				addmove
+			}
+
+			if(ev.id=="boardcontrolpaneloptions")
+			{
+				openenginesettings
 			}
 
 			if(ev.id=="boardcontrolpanelstart")
@@ -1148,14 +1158,9 @@ class GuiClass extends Application
 				}
 				if(kind=="button")
 				{
-					/*widget=s"""					
-					|<hbox $gr>
-					|<button text="$name" id="$id!apply"/>
-					|<button text="$name and Close" id="$id!applyclose"/>
-					|</hbox>
-					""".stripMargin*/
 					widget=s"""					
 					|<hbox $gr>
+					|<button text="$name" id="$id!apply"/>
 					|<button text="$name and Close" id="$id!applyclose"/>
 					|</hbox>
 					""".stripMargin
@@ -1209,7 +1214,7 @@ class GuiClass extends Application
 		|<vbox padding="5" style="-fx-border-style: solid; -fx-border-width: 1px; -fx-border-radius: 10px;">
 		|<scrollpane height="500.0" width="800.0">
 		|<vbox padding="5" bimage="marble.jpg" cover="false">
-		|<button id="applyallandclose" text="Apply all and close"/>
+		|<button id="applyallandclose" text="Apply All and Close"/>
 		|<grid vgap="5" hgap="5">
 		|$widgets
 		|</grid>

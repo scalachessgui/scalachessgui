@@ -51,6 +51,7 @@
 					<button id="boardcontrolpanelstart" img="icons/startt.png" style="round"/>
 					<button id="boardcontrolpanelstop" img="icons/stopt.png" style="round"/>
 					<button id="boardcontrolpanelmake" img="icons/maket.png" style="round"/>
+					<button id="boardcontrolpaneloptions" img="icons/optionst.png" style="round"/>
 					<vbox id="selectvariantvbox" padding="2" style="-fx-border-width: 1px;"/>
 				</hbox>
 				
