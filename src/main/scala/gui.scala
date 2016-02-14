@@ -680,6 +680,13 @@ class GuiClass extends Application
 
 			val parts=ev.id.split("!").toList
 
+			if(ev.id=="applyallandclose"){
+				for(id<-allengineids){
+					handler(builder.MyEvent(id=id+"!apply",kind="button pressed"))
+					Builder.stages("engineoptions").close
+				}
+			}
+
 			if(parts.length==2)
 			{
 				val action=parts(1)
@@ -1022,6 +1029,11 @@ class GuiClass extends Application
 		engine.set_multipv(mpv)
 	}
 
+	// collect the ids of engine option update widgets
+	// so that all engine options can be updated by handling their
+	// apply button pressed events
+	var allengineids=List[String]()
+
 	def load_current_engine
 	{
 		val engine_path=settings.get_variant_engine_path()
@@ -1045,6 +1057,8 @@ class GuiClass extends Application
 		}
 
 		var options=Map[String,Map[String,String]]()
+
+		var option_list=List[String]()
 
 		for(line<-engine.uci_puff.split("\r?\n").toList)
 		{
@@ -1089,6 +1103,7 @@ class GuiClass extends Application
 				if(name!="")
 				{
 					options+=(name->option)
+					option_list=option_list:+name
 				}
 			}
 		}
@@ -1097,13 +1112,16 @@ class GuiClass extends Application
 
 		var widgets=""
 		var r=1
-		for((name,option)<-options)
+		allengineids=List[String]()
+		for(name<-option_list)
 		{
+			val option=options(name)
 			if(option.contains("type"))
 			{
 				val kind=option("type")
 				var widget=""
 				val id=s"enginesettings#$engine_path#$name"
+				allengineids=allengineids:+id
 				val gr=s"""r="$r" c="2" """
 				if(kind=="check")
 				{
@@ -1130,9 +1148,14 @@ class GuiClass extends Application
 				}
 				if(kind=="button")
 				{
-					widget=s"""					
+					/*widget=s"""					
 					|<hbox $gr>
 					|<button text="$name" id="$id!apply"/>
+					|<button text="$name and Close" id="$id!applyclose"/>
+					|</hbox>
+					""".stripMargin*/
+					widget=s"""					
+					|<hbox $gr>
 					|<button text="$name and Close" id="$id!applyclose"/>
 					|</hbox>
 					""".stripMargin
@@ -1169,10 +1192,13 @@ class GuiClass extends Application
 					""".stripMargin
 					if(kind!="button")
 					{
-						widgets+=s"""
+						/*widgets+=s"""
 						|<button r="$r" c="3" id="$id!apply" text="Apply"/>
 						|<button r="$r" c="4" id="$id!applyclose" text="Apply and Close"/>
-						"""
+						""".stripMargin*/
+						widgets+=s"""
+						|<button r="$r" c="4" id="$id!applyclose" text="Apply and Close"/>
+						""".stripMargin
 					}
 					r+=1
 				}
@@ -1183,6 +1209,7 @@ class GuiClass extends Application
 		|<vbox padding="5" style="-fx-border-style: solid; -fx-border-width: 1px; -fx-border-radius: 10px;">
 		|<scrollpane height="500.0" width="800.0">
 		|<vbox padding="5" bimage="marble.jpg" cover="false">
+		|<button id="applyallandclose" text="Apply all and close"/>
 		|<grid vgap="5" hgap="5">
 		|$widgets
 		|</grid>
