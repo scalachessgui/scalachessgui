@@ -1055,6 +1055,11 @@ class GuiClass extends Application
 			return
 		}
 
+		if(settings.variant=="Atomic")
+		{
+			return
+		}
+
 		// uci
 
 		engine.engine_intro=true
