@@ -765,6 +765,15 @@ class GuiClass extends Application
 				engine_make
 			}
 
+			val hmatch="""boardcontrolpanelhint([0-9]+)""".r
+
+			ev.id match
+			{				
+				case hmatch(dur) => engine_hint(dur.toInt)
+
+				case _=>
+			}
+
 			if(ev.id=="selectpgnsaveasdir")
 			{
 				val dc=new DirectoryChooser()
@@ -1003,6 +1012,13 @@ class GuiClass extends Application
 			update
 		}
 
+	}
+
+	def engine_hint(dur: Int) {
+		engine_start()
+		Thread.sleep(dur)
+		engine_stop()
+		engine_make()
 	}
 
 	def load_engine()
