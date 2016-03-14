@@ -560,13 +560,16 @@ class board
 			if(canCastle())
 			{
 				
-				for(side<- List(KINGSIDE,QUEENSIDE))
+				for(cc<- List(WHITE,BLACK))
 				{
-					val orsq=origRookSquares(Tuple2(turn,side))
-
-					if(orsq!=NO_SQUARE)
+					for(side<- List(KINGSIDE,QUEENSIDE))
 					{
-						if(rep(orsq)==NO_PIECE) disableCastleToSide(side)
+						val orsq=origRookSquares(Tuple2(cc,side))
+
+						if(orsq!=NO_SQUARE)
+						{
+							if(rep(orsq)==NO_PIECE) disableCastleToSide(side,cc)
+						}
 					}
 				}
 
