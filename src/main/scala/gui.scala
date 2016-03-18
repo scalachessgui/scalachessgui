@@ -1071,7 +1071,7 @@ class GuiClass extends Application
 			return
 		}
 
-		if(settings.variant=="Atomic")
+		if(engine_path.indexOf("atomkraft")>=0)
 		{
 			return
 		}
