@@ -38,6 +38,7 @@ import book._
 import piece._
 
 import gui2.Engine
+import gui2.Robot
 
 ////////////////////////////////////////////////////////////////////
 
@@ -579,6 +580,11 @@ class GuiClass extends Application
 				case _=>
 			}
 
+			if(ev.id=="recordrect")
+			{
+				Builder.MyStage("recordrectdialog",modal=true,set_handler=handler,title="Record rect")
+			}
+
 			if(ev.id=="openmultpgn")
 			{
 				open_mult_pgn
@@ -1009,6 +1015,8 @@ class GuiClass extends Application
 		{
 			commands.g.makeMove(m)
 
+			click_move(m)
+
 			update
 		}
 
@@ -1272,9 +1280,48 @@ class GuiClass extends Application
 
 	def getboardcanvassize:Double=if(gb!=null) return gb.canvas_size.toDouble else 400.0
 
+	def click_square(sq:square.TSquare,flip:Boolean)
+	{
+		var rank=square.rankOf(sq)
+		if(flip) rank=7-rank
+		var file=square.fileOf(sq)
+		if(flip) file=7-file
+
+		val x=Builder.gd("stages#recordrectdialog#x",25.0).toInt
+		val y=Builder.gd("stages#recordrectdialog#y",25.0).toInt
+		val width=Builder.gd("stages#recordrectdialog#width",400.0).toInt
+		val height=Builder.gd("stages#recordrectdialog#height",400.0).toInt
+
+		val screenx:Int=x+file*width/8+width/16
+		val screeny:Int=y+rank*width/8+width/16
+
+		gui2.Robot.click_xy(screenx,screeny)
+	}
+
+	def click_move(m:move)
+	{
+		val doclick=Builder.gb("components#clickrect",false)
+
+		if(!doclick) return
+
+		var from=m.from
+		var to=m.to
+
+		click_square(m.from,settings.flip)
+		Thread.sleep(100)
+		click_square(m.to,settings.flip)
+	}
+
 	def manual_move_made(m:move,san:String)
 	{
 		commands.exec(s"m $san")
+
+		val doclick=Builder.gb("components#clickrect",false)
+
+		if(doclick)
+		{
+			engine_hint(500)
+		}
 
 		update
 	}
