@@ -1073,6 +1073,7 @@ class GuiClass extends Application
 
 		if(engine_path.indexOf("atomkraft")>=0)
 		{
+			set_multipv(get_multipv)
 			return
 		}
 
