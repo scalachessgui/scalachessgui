@@ -22,7 +22,9 @@
 			<menu text="Settings">
 				<menuitem id="setupboard" text="Setup board position manually"></menuitem>
 				<menuitem id="boardsettings" text="Board settings"></menuitem>
+				<!--
 				<menuitem id="recordrect" text="Record rect"></menuitem>
+				-->
 			</menu>
 			<menu text="Random">
 				<menuitem id="random20" text="Make 20 random halfmoves"></menuitem>
@@ -61,8 +63,10 @@
 				
 				<hbox padding="5" gap="5">
 					<combo id="selectvariantcombo"/>
+					<!--
 					<label text="Click"/>
 					<checkbox id="clickrect"/>
+					-->
 				</hbox>
 				
 			</vbox>

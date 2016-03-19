@@ -232,7 +232,7 @@ class board
 		if(c==WHITE)
 		return (castling_rights&(if(side==KINGSIDE) CASTLE_K else CASTLE_Q))!=0
 		else
-		return (castling_rights&(if(side==QUEENSIDE) CASTLE_k else CASTLE_q))!=0
+		return (castling_rights&(if(side==KINGSIDE) CASTLE_k else CASTLE_q))!=0
 
 	def canCastle(c:TColor=getturn):Boolean=
 		canCastleToSide(KINGSIDE)||canCastleToSide(QUEENSIDE)
@@ -366,6 +366,7 @@ class board
 			val r=baseRankOfColor(c)
 			var f=0
 			var rc=0
+			if(!canCastleToSide(QUEENSIDE,c)) rc=1
 			val testrook=toColor(ROOK,c)
 
 			while((f< BOARD_SIZE)&&(rc< 2))
