@@ -17,6 +17,8 @@ import javafx.event._
 import javafx.geometry._
 import javafx.beans.value._
 
+import java.awt.image._
+
 ////////////////////////////////////////////////////////////////////
 
 import java.io._
@@ -585,6 +587,11 @@ class GuiClass extends Application
 				Builder.MyStage("recordrectdialog",modal=true,set_handler=handler,title="Record rect")
 			}
 
+			if(ev.id=="recordcol")
+			{
+				learn_board_colors
+			}
+
 			if(ev.id=="openmultpgn")
 			{
 				open_mult_pgn
@@ -688,6 +695,11 @@ class GuiClass extends Application
 
 		if(ev.kind=="button pressed")
 		{
+
+			if(ev.id=="learnboard")
+			{
+				learn_board
+			}
 
 			val parts=ev.id.split("!").toList
 
@@ -1267,6 +1279,8 @@ class GuiClass extends Application
 		update
 
 		load_current_engine
+
+		init_board_patterns
 	}
 
 	def variant_selected(v:String=get_selected_variant)
@@ -1280,6 +1294,21 @@ class GuiClass extends Application
 
 	def getboardcanvassize:Double=if(gb!=null) return gb.canvas_size.toDouble else 400.0
 
+	case class BRect(x:Int=25, y:Int=25, width:Int=400, height:Int=400, ss:Int=50, hss:Int=25) {}
+
+	def getbrect: BRect =
+	{
+		val x=Builder.gd("stages#recordrectdialog#x",25.0).toInt
+		val y=Builder.gd("stages#recordrectdialog#y",25.0).toInt
+		val width=Builder.gd("stages#recordrectdialog#width",400.0).toInt
+		val height=Builder.gd("stages#recordrectdialog#height",400.0).toInt
+
+		val ss=(width+height)/16
+		val hss=ss/2
+
+		BRect(x,y,width,height,ss,hss)
+	}
+
 	def click_square(sq:square.TSquare,flip:Boolean)
 	{
 		var rank=square.rankOf(sq)
@@ -1287,13 +1316,10 @@ class GuiClass extends Application
 		var file=square.fileOf(sq)
 		if(flip) file=7-file
 
-		val x=Builder.gd("stages#recordrectdialog#x",25.0).toInt
-		val y=Builder.gd("stages#recordrectdialog#y",25.0).toInt
-		val width=Builder.gd("stages#recordrectdialog#width",400.0).toInt
-		val height=Builder.gd("stages#recordrectdialog#height",400.0).toInt
+		val brect=getbrect
 
-		val screenx:Int=x+file*width/8+width/16
-		val screeny:Int=y+rank*width/8+width/16
+		val screenx:Int=brect.x+file*brect.ss+brect.hss
+		val screeny:Int=brect.y+rank*brect.ss+brect.hss
 
 		gui2.Robot.click_xy(screenx,screeny)
 	}
@@ -1312,16 +1338,183 @@ class GuiClass extends Application
 		click_square(m.to,settings.flip)
 	}
 
-	def manual_move_made(m:move,san:String)
+	def learn_board_colors
 	{
-		commands.exec(s"m $san")
+		val brect=getbrect
+		val bim=gui2.Robot.getImage(brect.x, brect.y, brect.width, brect.height)
 
-		val doclick=Builder.gb("components#clickrect",false)
+		val lxl=brect.hss+brect.ss*3
+		val lyl=brect.hss+brect.ss*3
 
-		if(doclick)
+		val lxd=brect.hss+brect.ss*4
+		val lyd=brect.hss+brect.ss*3
+
+		val lcol=bim.getRGB(lxl,lyl)
+		val dcol=bim.getRGB(lxd,lyd)
+
+		Builder.setval("boardattrs#lcol",""+lcol)
+		Builder.setval("boardattrs#dcol",""+dcol)
+	}
+
+	case class BAttrs(lcol:Int,dcol:Int) {}
+
+	def getbattrs: BAttrs =
+	{
+		val lcol=Builder.gi("boardattrs#lcol",0)
+		val dcol=Builder.gi("boardattrs#dcol",1)
+
+		BAttrs(lcol,dcol)
+	}
+
+	var pstartpos=""
+	var popenings=List[String]()
+	var popeningsans=List[String]()
+
+	def init_board_patterns
+	{
+		val b=new board
+		b.reset
+		pstartpos=b.report_pattern
+		b.initMoveGen
+		popenings=List[String]()
+		while(b.nextLegalMove) {
+			val bc=b.cclone
+			bc.makeMove(b.current_move)
+			popeningsans=popeningsans:+b.toSan(b.current_move)
+			popenings=popenings:+bc.report_pattern
+		}
+	}
+
+	def learn_board_pattern(flip:Boolean):String=
+	{
+		val brect=getbrect
+		val bim=gui2.Robot.getImage(brect.x, brect.y, brect.width, brect.height)
+
+		val battrs=getbattrs
+
+		var buff=""
+		var fbuff=""
+
+		for(rank<- 0 to 7)
+		{
+			for(file<- 0 to 7)
+			{
+				var f=file
+				var r=rank
+
+				if(flip)
+				{
+					f=7-f
+					r=7-r
+				}
+
+				val lx=brect.hss+brect.ss*f
+				val ly=brect.hss+brect.ss*r
+
+				var ecnt=0
+
+				for(blurx<- -2 to 2)
+				{
+					for(blury<- -2 to 2)
+					{
+						val col=bim.getRGB(lx+blurx*brect.hss/10,ly+blury*brect.hss/10)
+						if((col==battrs.lcol)||(col==battrs.dcol)) ecnt+=1
+					}
+				}
+
+				buff+=(if(ecnt>20) "0" else "1")
+			}
+			buff+="\n"
+		}
+		buff
+	}
+
+	def learn_board
+	{
+		val buff=learn_board_pattern(false)
+		val fbuff=learn_board_pattern(true)
+
+		var found=false
+
+		if(buff==pstartpos)
+		{
+			commands.exec("r")
+
+			update
+
+			found=true
+		}
+		else
+		{
+			for(i<- 0 to (popenings.length-1))
+			{
+				val pc=popenings(i)
+				
+				if((buff==pc)||(fbuff==pc))
+				{
+					commands.exec("r")
+
+					commands.exec("m "+popeningsans(i))
+
+					settings.flip=false
+
+					if(fbuff==pc)
+					{
+						settings.flip=true
+
+						found=true
+					}
+
+					update
+				}
+			}
+		}
+
+		if(!found)
+		{
+			val b=new board
+			b.set_from_fen(commands.g.b.report_fen)
+			b.initMoveGen
+			while(b.nextLegalMove && !found) {
+				val bc=b.cclone
+				bc.makeMove(b.current_move)
+				if(buff==bc.report_pattern)
+				{
+					settings.flip=false
+
+					found=true
+				}
+				if(fbuff==bc.report_pattern)
+				{
+					settings.flip=true
+					
+					found=true
+				}
+				if(found)
+				{
+					val san=b.toSan(b.current_move)
+
+					commands.exec("m "+san)
+
+					update
+
+					found=true
+				}
+			}
+		}
+
+		if(found)
 		{
 			engine_hint(500)
 		}
+
+	}
+
+	def getdoclick = Builder.gb("components#clickrect",false)
+
+	def manual_move_made(m:move,san:String)
+	{
+		commands.exec(s"m $san")
 
 		update
 	}

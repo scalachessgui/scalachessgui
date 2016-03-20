@@ -400,6 +400,30 @@ class board
 		}
 	}
 
+	def report_pattern:String=
+	{
+		val pattern=(for(rank<-rep.grouped(8)) yield
+			{
+				var i=0				
+				var r=""
+				while(i< 8)
+				{
+					val p=rank(i)
+					if(p==NO_PIECE)
+					{
+						r+="0"
+					}
+					else
+					{
+						r+="1"
+					}
+					i+=1
+				}
+				r
+			}).mkString("\n")+"\n"
+		pattern
+	}
+
 	def report_fen:String=
 	{
 		val posfen=(for(rank<-rep.grouped(8)) yield

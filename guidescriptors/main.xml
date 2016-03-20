@@ -22,9 +22,12 @@
 			<menu text="Settings">
 				<menuitem id="setupboard" text="Setup board position manually"></menuitem>
 				<menuitem id="boardsettings" text="Board settings"></menuitem>
+				
 				<!--
 				<menuitem id="recordrect" text="Record rect"></menuitem>
+				<menuitem id="recordcol" text="Record col"></menuitem>
 				-->
+				
 			</menu>
 			<menu text="Random">
 				<menuitem id="random20" text="Make 20 random halfmoves"></menuitem>
@@ -54,19 +57,22 @@
 					<button id="boardcontrolpanelstart" img="icons/startt.png" style="round"/>
 					<button id="boardcontrolpanelstop" img="icons/stopt.png" style="round"/>
 					<button id="boardcontrolpanelmake" img="icons/maket.png" style="round"/>
-					<button id="boardcontrolpanelhint500" text="Q" style="round"/>
-					<button id="boardcontrolpanelhint1500" text="H" style="round"/>
-					<button id="boardcontrolpanelhint5000" text="T" style="round"/>
 					<button id="boardcontrolpaneloptions" img="icons/optionst.png" style="round"/>
 					<vbox id="selectvariantvbox" padding="2" style="-fx-border-width: 1px;"/>
 				</hbox>
 				
 				<hbox padding="5" gap="5">
 					<combo id="selectvariantcombo"/>
+					
 					<!--
 					<label text="Click"/>
 					<checkbox id="clickrect"/>
+					<button id="learnboard" text="LEARN" style="round"/>
+					<button id="boardcontrolpanelhint500" text="Q" style="round"/>
+					<button id="boardcontrolpanelhint1500" text="H" style="round"/>
+					<button id="boardcontrolpanelhint5000" text="T" style="round"/>
 					-->
+					
 				</hbox>
 				
 			</vbox>
