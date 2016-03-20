@@ -1440,6 +1440,8 @@ class GuiClass extends Application
 		{
 			commands.exec("r")
 
+			settings.flip=false
+
 			update
 
 			found=true
