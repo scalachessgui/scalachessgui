@@ -1516,8 +1516,6 @@ class GuiClass extends Application
 
 	def manual_move_made(m:move,san:String)
 	{
-		println(commands.g.b.report_orig_rook_squares)
-
 		commands.exec(s"m $san")
 
 		update
