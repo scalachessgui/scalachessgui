@@ -582,10 +582,7 @@ class board
 			}
 
 			// check if rook move/capture or king move disables castling
-			if(canCastle())
-			{
-				
-				for(cc<- List(WHITE,BLACK))
+			for(cc<- List(WHITE,BLACK))
 				{
 					for(side<- List(KINGSIDE,QUEENSIDE))
 					{
@@ -593,16 +590,17 @@ class board
 
 						if(orsq!=NO_SQUARE)
 						{
-							if(rep(orsq)==NO_PIECE) disableCastleToSide(side,cc)
+							if(rep(orsq)==NO_PIECE)
+							{
+								disableCastleToSide(side,cc)
+							}
 						}
 					}
 				}
 
-				if(rm.from_piece==toColor(KING,turn))
-				{
-					disableCastle()
-				}
-				
+			if(rm.from_piece==toColor(KING,turn))
+			{
+				disableCastle()
 			}
 		}
 

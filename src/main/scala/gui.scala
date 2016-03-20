@@ -1507,7 +1507,7 @@ class GuiClass extends Application
 
 		if(found)
 		{
-			engine_hint(500)
+			engine_hint(350)
 		}
 
 	}
@@ -1516,6 +1516,8 @@ class GuiClass extends Application
 
 	def manual_move_made(m:move,san:String)
 	{
+		println(commands.g.b.report_orig_rook_squares)
+
 		commands.exec(s"m $san")
 
 		update
