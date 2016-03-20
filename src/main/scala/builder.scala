@@ -248,6 +248,15 @@ object Builder
 		null
 	}
 
+	def setbuttontext(id:String, what:String)=
+	{
+		val comp=getcomp(id)
+		if((comp!=null)&&(comp.isInstanceOf[MyButton]))
+		{
+			comp.node.asInstanceOf[Button].setText(what)
+		}
+	}
+
 	def gettextarea(id:String):MyTextArea=
 	{
 		val comp=getcomp(id)

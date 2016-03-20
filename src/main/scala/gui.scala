@@ -698,7 +698,19 @@ class GuiClass extends Application
 
 			if(ev.id=="learnboard")
 			{
-				learn_board
+				if(learn_on)
+				{
+					learn_on=false
+				}
+				else
+				{
+					learn_on=true
+					new Thread(new Runnable{
+						def run{
+							learn_thread_func
+						}
+					}).start()
+				}
 			}
 
 			val parts=ev.id.split("!").toList
@@ -1429,8 +1441,55 @@ class GuiClass extends Application
 		buff
 	}
 
-	def learn_board
+	var learn_on=false
+
+	def learn_thread_func
 	{
+
+		Platform.runLater(new Runnable{
+			def run
+			{				
+				Builder.setbuttontext("learnboard","STOP")
+			}
+		})
+
+		var found=false
+
+		while(learn_on)
+		{
+			if(learn_board(false))
+			{			
+				found=true
+				learn_on=false
+			}
+			else
+			{				
+				Thread.sleep(100)
+			}
+		}
+
+		if(found)
+		{
+			Platform.runLater(new Runnable{
+				def run
+				{			
+					learn_board(true)
+				}
+			})
+		}
+
+		Platform.runLater(new Runnable{
+			def run
+			{				
+				Builder.setbuttontext("learnboard","LEARN")
+			}
+		})
+
+	}
+
+	def learn_board(make: Boolean): Boolean=
+	{
+
 		val buff=learn_board_pattern(false)
 		val fbuff=learn_board_pattern(true)
 
@@ -1438,13 +1497,16 @@ class GuiClass extends Application
 
 		if(buff==pstartpos)
 		{
-			commands.exec("r")
-
-			settings.flip=false
-
-			update
-
 			found=true
+
+			if(make)
+			{
+				commands.exec("r")
+
+				settings.flip=false
+
+				update
+			}
 		}
 		else
 		{
@@ -1452,22 +1514,20 @@ class GuiClass extends Application
 			{
 				val pc=popenings(i)
 				
-				if((buff==pc)||(fbuff==pc))
+				if(fbuff==pc)
 				{
-					commands.exec("r")
+					found=true
 
-					commands.exec("m "+popeningsans(i))
-
-					settings.flip=false
-
-					if(fbuff==pc)
+					if(make)
 					{
+						commands.exec("r")
+
+						commands.exec("m "+popeningsans(i))
+
 						settings.flip=true
 
-						found=true
+						update
 					}
-
-					update
 				}
 			}
 		}
@@ -1480,35 +1540,36 @@ class GuiClass extends Application
 			while(b.nextLegalMove && !found) {
 				val bc=b.cclone
 				bc.makeMove(b.current_move)
+				var newflip=false
 				if(buff==bc.report_pattern)
 				{
-					settings.flip=false
-
 					found=true
 				}
 				if(fbuff==bc.report_pattern)
 				{
-					settings.flip=true
+					newflip=true
 					
 					found=true
 				}
-				if(found)
+				if(found&&make)
 				{
 					val san=b.toSan(b.current_move)
 
 					commands.exec("m "+san)
 
-					update
+					settings.flip=newflip
 
-					found=true
+					update
 				}
 			}
 		}
 
-		if(found)
+		if(found&&make)
 		{
 			engine_hint(350)
 		}
+
+		found
 
 	}
 
