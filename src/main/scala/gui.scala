@@ -487,6 +487,16 @@ class GuiClass extends Application
 		Builder.MyStage("engineoptions",modal=true,do_size=false,set_handler=handler,title="Engine settings")
 	}
 
+	def learn_start
+	{
+		learn_on=true
+		new Thread(new Runnable{
+			def run{
+				learn_thread_func
+			}
+		}).start()
+	}
+
 	def handler(ev:MyEvent)
 	{
 		Builder.default_handler(ev)
@@ -704,12 +714,7 @@ class GuiClass extends Application
 				}
 				else
 				{
-					learn_on=true
-					new Thread(new Runnable{
-						def run{
-							learn_thread_func
-						}
-					}).start()
+					learn_start
 				}
 			}
 
@@ -1037,9 +1042,9 @@ class GuiClass extends Application
 
 		if(m!=null)
 		{
-			commands.g.makeMove(m)
-
 			click_move(m)
+
+			commands.g.makeMove(m)
 
 			update
 		}
@@ -1346,7 +1351,7 @@ class GuiClass extends Application
 		var to=m.to
 
 		click_square(m.from,settings.flip)
-		Thread.sleep(100)
+		Thread.sleep(50)
 		click_square(m.to,settings.flip)
 	}
 
@@ -1464,7 +1469,7 @@ class GuiClass extends Application
 			}
 			else
 			{				
-				Thread.sleep(100)
+				Thread.sleep(50)
 			}
 		}
 
@@ -1566,7 +1571,11 @@ class GuiClass extends Application
 
 		if(found&&make)
 		{
-			engine_hint(350)
+			engine_hint(100)
+
+			Thread.sleep(400)
+
+			learn_start
 		}
 
 		found
