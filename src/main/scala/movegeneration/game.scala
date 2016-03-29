@@ -342,7 +342,7 @@ class game
 
 			if(inc_move_count)
 			{
-				if(!(BUILDING&&game_found))
+				//if(!(BUILDING&&game_found))
 				{
 					book.currentPos.inc_move_count(san)
 				}
@@ -552,7 +552,7 @@ class game
 
 				html_pgn_nodes+=sannode
 
-				var style="background-color: #ffffff; border-style: solid; border-width: 1px; border-color: #ffffff; border-radius: 10px; padding: 3px;"
+				var style="padding: 4px;"
 
 				if(cn==sannode)
 				{
@@ -1193,6 +1193,7 @@ class game
 		//println("move list _"+move_list+"_")
 		move_list=move_list.replaceAll(" \\)",")")
 		//println("move list _"+move_list+"_")
+		move_list=move_list.replaceAll("\\)\\)",") )")
 
 		var moves=move_list.split(" ")
 
@@ -1240,6 +1241,7 @@ class game
 						parse_moves_recursive()
 						current_node=save_current_node
 						b.set_from_fen(current_node.fen)
+						pos_changed
 					}
 					else
 					{
