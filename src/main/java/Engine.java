@@ -367,14 +367,11 @@ public class Engine extends EngineLine
                                  
                                  buffer="";
                              }
-							 else if(chunk=='\r')
+							 else if((chunk=='\r')&&(buffer.length()>0)&&(buffer.charAt(0)=='\r'))
 							 {
-								if(buffer.length()>0)
-								{
-									update_log(buffer+"\r");
-									
-									buffer="";
-								}
+								update_log(buffer+"\r");
+
+								buffer="";
 							 }
                              else
                              {

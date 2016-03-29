@@ -985,7 +985,7 @@ class GuiClass extends Application
 		var what=setwhat
 		what=what.replaceAll("\\n","")
 		if(what=="<- ") return
-		if(what.contains("\r"))
+		if(what(0)=='\r')
 		{
 			if(elog.length>0)
 			{
