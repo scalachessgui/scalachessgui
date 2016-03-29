@@ -76,6 +76,11 @@ public class Engine extends EngineLine
     {
         System.out.println("depth: "+depth+" score: "+score_numerical+" pv: "+pv);
     }
+	
+	public void update_log(String what)
+    {
+        
+    }
     
     public void update_engine_forced()
     {
@@ -175,6 +180,8 @@ public class Engine extends EngineLine
                         
             engine_out.write(command.getBytes());
             engine_out.flush();
+			
+			update_log("-> "+command);
 
         }
         catch(IOException ex)
@@ -314,6 +321,11 @@ public class Engine extends EngineLine
         {
 
             uci_engine_process_builder=new ProcessBuilder(uci_engine_path);
+			File epf=new File(uci_engine_path);
+			if(epf.exists())
+			{
+				uci_engine_process_builder.directory(new File(epf.getParent()));
+			}
 
             try {
                    uci_engine_process=uci_engine_process_builder.start();
@@ -350,9 +362,20 @@ public class Engine extends EngineLine
                                  //consume_engine_out(buffer);
                                  
                                  consume_engine_out(buffer);
+								 
+								 update_log("<- "+buffer+"\n");
                                  
                                  buffer="";
                              }
+							 else if(chunk=='\r')
+							 {
+								if(buffer.length()>0)
+								{
+									update_log(buffer+"\r");
+									
+									buffer="";
+								}
+							 }
                              else
                              {
                                  buffer+=chunk;

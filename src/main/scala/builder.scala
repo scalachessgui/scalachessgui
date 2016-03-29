@@ -1243,6 +1243,17 @@ object Builder
 		override def build
 		{
 			node=new TextField(gs("text"))
+
+			node.asInstanceOf[TextField].setOnKeyPressed(new EventHandler[KeyEvent]
+			{
+				def handle(ev:KeyEvent)
+				{
+					if(ev.getCode().equals(KeyCode.ENTER))
+					{
+						handler(MyEvent(id,"textfield entered",getText))
+					}
+				}
+			})
 		}
 
 		override def get_gui_value:Data=

@@ -584,11 +584,16 @@ case class MyMenuItem(caption:String,callback:()=>Unit) extends MenuItem
 	});	
 }
 
-class MyEngine(update_callback:()=>Unit) extends Engine
+class MyEngine(update_callback:()=>Unit,log_callback:(String)=>Unit) extends Engine
 {
 	override def update_engine()
 	{
 		update_callback()
+	}
+
+	override def update_log(what: String)
+	{
+		log_callback(what)
 	}
 }
 

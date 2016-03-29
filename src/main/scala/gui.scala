@@ -497,6 +497,14 @@ class GuiClass extends Application
 		}).start()
 	}
 
+	def IssueEngineCommand
+	{
+		val etext=Builder.gettext("enginecommand")
+		val command=etext.getText
+		etext.setText("")
+		engine.issue_command(command+"\n")
+	}
+
 	def handler(ev:MyEvent)
 	{
 		Builder.default_handler(ev)
@@ -590,6 +598,11 @@ class GuiClass extends Application
 				case rmatch(num_halfmoves) => gen_random(num_halfmoves.toInt)
 
 				case _=>
+			}
+
+			if(ev.id=="engineconsole")
+			{
+				Builder.MyStage("engineconsole",modal=false,set_handler=handler,do_size=false,title="Engine console")
 			}
 
 			if(ev.id=="recordrect")
@@ -703,8 +716,21 @@ class GuiClass extends Application
 			}
 		}
 
+		if(ev.kind=="textfield entered")
+		{
+			if(ev.id=="enginecommand")
+			{
+				IssueEngineCommand
+			}
+		}
+
 		if(ev.kind=="button pressed")
 		{
+
+			if(ev.id=="issueenginecommand")
+			{
+				IssueEngineCommand
+			}
 
 			if(ev.id=="learnboard")
 			{
@@ -730,6 +756,16 @@ class GuiClass extends Application
 			if(parts.length==2)
 			{
 				val action=parts(1)
+				if(action=="enginecommand")
+				{
+					val command=parts(0)
+					if(command=="setfen")
+					{
+						engine.issue_command("position fen "+commands.g.b.report_fen+"\n")
+					} else {
+						engine.issue_command(command+"\n")
+					}
+				}
 				if((action=="apply")||(action=="applyclose"))
 				{
 					val id=parts(0)
@@ -935,11 +971,70 @@ class GuiClass extends Application
 
 	var gb:guiboard=null
 
-	val engine=new components.MyEngine(update_engine)
+	val engine=new components.MyEngine(update_engine,update_log)
 
 	def get_multipv:Int=
 	{
 		Builder.gi("components#multipvcombo#selected",3)
+	}
+
+	var elog=Array[String]()
+
+	def update_log(setwhat: String)
+	{
+		var what=setwhat
+		what=what.replaceAll("\\n","")
+		if(what=="<- ") return
+		if(what.contains("\r"))
+		{
+			if(elog.length>0)
+			{
+				if(elog(elog.length-1).contains("\r"))
+				{
+					elog(elog.length-1)=what
+				} else {
+					elog=elog:+what
+				}
+			} else {
+				elog=elog:+what
+			}
+		}
+		else
+		{
+			elog=elog:+what
+		}
+		while(elog.length>38) {
+			elog=elog.tail
+		}
+		def formatline(setwhat: String): String=
+		{
+			var what=setwhat
+			if(what.length < 3) return what+"<br>"
+			val pref=what.substring(0,3)
+			var line=what.substring(3)
+			line=line.replaceAll(" ","&nbsp;")
+			if(pref=="-> ")
+			{
+				return s"""<font color="red">$line</font><br>"""
+			} else if(pref=="<- ") {
+				return s"""<font color="blue">$line</font><br>"""
+			} else {
+				return s"""<font color="brown">$what</font><br>"""
+			}
+		}
+		if(Builder.stages.contains("engineconsole"))
+		{
+			val eloghtml=elog.map(formatline)
+			val elogcontent=eloghtml.mkString
+			val content=s"""
+				|<div style="font-family: monospace;">
+				|$elogcontent
+				|</div>
+			""".stripMargin
+			Platform.runLater(new Runnable{def run{
+				Builder.getwebe("engineconsoletext").loadContent(content)
+			}})
+		}
 	}
 
 	def update_engine()
@@ -1571,7 +1666,7 @@ class GuiClass extends Application
 
 		if(found&&make)
 		{
-			engine_hint(100)
+			engine_hint(450)
 
 			Thread.sleep(400)
 

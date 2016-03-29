@@ -1,0 +1,15 @@
+<vbox padding="5" gap="5">
+	<hbox padding="5" gap="5">
+		<textfield style="-fx-font-size: 18px; -fx-text-fill: #00007f;" id="enginecommand"/>
+		<button id="issueenginecommand" text="Issue" style="round"/>
+		<button id="setfen!enginecommand" text="Set FEN" style="round"/>
+		<button id="lb!enginecommand" text="load book"/>
+		<button id="pb!enginecommand" text="print book"/>
+		<button id="bb!enginecommand" text="build book"/>
+		<button id="bs!enginecommand" text="stop build book"/>
+		<button id="sb!enginecommand" text="save book"/>
+	</hbox>
+	<scrollpane id="engineconsolescrollpane" width="800">
+		<webview id="engineconsoletext" height="600" width="3000"/>
+	</scrollpane>
+</vbox>

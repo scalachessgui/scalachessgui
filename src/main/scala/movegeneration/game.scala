@@ -491,6 +491,7 @@ class game
 	def report_pgn:String=
 	{
 		pgn_headers+=("FEN"->root.fen)
+		pgn_headers+=("Variant"->getvariant)
 
 		report_headers=(for((k,v)<-pgn_headers) yield s"""[$k "$v"]""").mkString("\n")
 
@@ -551,11 +552,11 @@ class game
 
 				html_pgn_nodes+=sannode
 
-				var style=""
+				var style="background-color: #ffffff; border-style: solid; border-width: 1px; border-color: #ffffff; border-radius: 10px; padding: 3px;"
 
 				if(cn==sannode)
 				{
-					style="background-color: #00ff00;"
+					style="background-color: #cfffcf; border-style: solid; border-width: 1px; border-color: #000000; border-radius: 10px; padding: 3px;"
 				}
 
 				pgn+=s""" <span id="san$index" onmousedown="x='$index';" style="$style">$addsan</span> """
@@ -611,6 +612,7 @@ class game
 	def report_pgn_html(cn:gameNode):String=
 	{
 		pgn_headers+=("FEN"->root.fen)
+		pgn_headers+=("Variant"->getvariant)
 
 		report_headers_html=(for((k,v)<-pgn_headers) yield 
 		{
@@ -629,7 +631,7 @@ class game
 			|var x="";
 			|var field="";
 			|</script>
-			|<div style="font-family: monospace;">
+			|<div style="font-family: monospace; font-size: 28px; font-weight: bold;">
 			|<table cellpadding="0" cellspacing="0">
 			|$report_headers_html
 			|</table>
