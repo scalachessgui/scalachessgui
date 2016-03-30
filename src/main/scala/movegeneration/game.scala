@@ -502,6 +502,50 @@ class game
 		List(report_headers,move_list).mkString("\n\n")
 	}
 
+	def report_pgn_tree:String=
+	{
+
+		var pgn=""
+
+		def report_pgn_recursive(gn:gameNode,sub:Boolean,line: List[String])
+		{
+
+			val sortedSans=gn.sortedSans
+
+			val numSans=sortedSans.length
+
+			if(numSans==0) {
+				pgn+=line.mkString(" ")+"\n"
+				return
+			}
+
+			for(san<-sortedSans)
+			{
+
+				val child=gn.childs(san)
+
+				var move_no=child.get_move_no
+
+				var addsan=san
+
+				if(child.get_turn=='w')
+				{
+					addsan="%4s".format(move_no)+" %-5s".format(addsan)
+				} else {
+					addsan=" %-5s".format(addsan)
+				}
+
+				report_pgn_recursive(gn.childs(san),true,line:+addsan)
+
+			}
+
+		}
+
+		report_pgn_recursive(root,false,List[String]())
+
+		pgn
+	}
+
 	var html_pgn_nodes=ArrayBuffer[gameNode]()
 
 	def report_pgn_move_list_html(cn:gameNode):String=

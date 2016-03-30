@@ -48,7 +48,7 @@ import gui2.Robot
 class GuiClass extends Application
 {
 
-	val scrollpanes=List("colorpgn","pgn","move","engine")
+	val scrollpanes=List("colorpgn","pgn","pgntree","move","engine")
 
 	def getpanewidth=Builder.gsd("panewidth",750.0)
 	def getinnerpanewidth=getpanewidth-30.0
@@ -1808,6 +1808,8 @@ class GuiClass extends Application
 
 
 			Builder.getcomp("pgntext").asInstanceOf[Builder.MyTextArea].setText(commands.g.report_pgn)
+
+			Builder.getcomp("pgntreetext").asInstanceOf[Builder.MyTextArea].setText(commands.g.report_pgn_tree)
 
 			Builder.setweb("movetext",commands.g.b.genPrintableMoveList(html=true))
 

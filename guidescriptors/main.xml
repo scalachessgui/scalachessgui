@@ -96,6 +96,14 @@
 					</vbox>
 				</tab>
 				
+				<tab caption="PGN tree">
+					<vbox padding="5" gap="5">
+						<scrollpane id="pgntreescrollpane" width="$panewidth">
+							<textarea id="pgntreetext" wrap="true" style="monotext" height="1950.0" width="3000.0"/>
+						</scrollpane>
+					</vbox>
+				</tab>
+				
 				<tab caption="Moves">
 					<vbox padding="5" gap="5">
 						<scrollpane id="movescrollpane" width="$panewidth">
