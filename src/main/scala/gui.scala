@@ -16,6 +16,7 @@ import javafx.scene.image._
 import javafx.event._
 import javafx.geometry._
 import javafx.beans.value._
+import javafx.concurrent.Worker._
 
 import java.awt.image._
 
@@ -1713,6 +1714,9 @@ class GuiClass extends Application
 				Builder.getcomp(scrollpane+"scrollpane").node.asInstanceOf[ScrollPane].setMaxHeight(paneheight)
 			}
 
+			Builder.getcomp("colorpgntext").node.asInstanceOf[WebView].setMinHeight(paneheight)
+			Builder.getcomp("colorpgntext").node.asInstanceOf[WebView].setMaxHeight(paneheight)
+
 			val GAMES_STEP=((paneheight-70)/18).toInt
 
 			for(gamebrowser<-List(pgn_game_browser,book_game_browser))
@@ -1774,7 +1778,34 @@ class GuiClass extends Application
 
 			Builder.getcomp("boardfenlabel").asInstanceOf[Builder.MyLabel].setText(fen)
 
-			Builder.setweb("colorpgntext",commands.g.report_pgn_html(commands.g.current_node))
+			val cpc=commands.g.report_pgn_html(commands.g.current_node)
+
+			Builder.setweb("colorpgntext",cpc)
+
+			val mi=cpc.indexOf("padding: 3px")
+
+			val len=cpc.length.toDouble
+
+			var v=0.0
+
+			if(mi>0) {
+				v=(mi-2000)/len
+			}
+
+			val cpwe=Builder.getwebe("colorpgntext")
+
+			cpwe.getLoadWorker().stateProperty().addListener(new ChangeListener[State]{
+	            def changed(ov: ObservableValue[_ <: State], oldState: State, newState: State) {
+	                if (newState == State.SUCCEEDED) {
+	                	val h=cpwe.executeScript("document.body.scrollHeight").toString().toDouble
+	                	var sh=h*v
+	                	if(sh>h) sh=h
+	                	if(sh< 0) sh=0
+	                	cpwe.executeScript("window.scrollTo(" + 0 + ", " + sh + ")");
+					}
+				}
+			})
+
 
 			Builder.getcomp("pgntext").asInstanceOf[Builder.MyTextArea].setText(commands.g.report_pgn)
 

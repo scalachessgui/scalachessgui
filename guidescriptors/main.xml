@@ -83,7 +83,7 @@
 				<tab caption="Color PGN">
 					<vbox padding="5" gap="5">
 						<scrollpane id="colorpgnscrollpane" width="$panewidth">
-							<webview id="colorpgntext" height="1950.0" width="$innerpanewidth"/>
+							<webview id="colorpgntext" height="400.0" width="$innerpanewidth"/>
 						</scrollpane>
 					</vbox>
 				</tab>
