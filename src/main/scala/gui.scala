@@ -48,7 +48,15 @@ import gui2.Robot
 class GuiClass extends Application
 {
 
-	val scrollpanes=List("colorpgn","pgn","pgntree","move","engine")
+	val scrollpanes=List("colorpgn","pgn","pgntree","move","engine","engines")
+
+	def update_enginelist(content:String)
+	{
+		//println(content)
+		Builder.setweb("enginestext",content)
+	}
+
+	val enginelist=GEngineList(update_enginelist)
 
 	def getpanewidth=Builder.gsd("panewidth",750.0)
 	def getinnerpanewidth=getpanewidth-30.0
@@ -396,6 +404,11 @@ class GuiClass extends Application
 		}
 	}
 
+	def enginesclicked
+	{
+		enginelist.Handle(Builder.getwebe("enginestext"))
+	}
+
 	def bookclicked
 	{
 		val key=Builder.getwebe("booktext").executeScript("key").toString()
@@ -542,6 +555,11 @@ class GuiClass extends Application
 
 		if(ev.kind=="webview clicked")
 		{
+
+			if(ev.id=="enginestext")
+			{
+				enginesclicked
+			}
 
 			if(ev.id=="booktext")
 			{
@@ -1417,6 +1435,8 @@ class GuiClass extends Application
 		init_board_patterns
 
 		init_enginescombo
+
+		enginelist.Load
 	}
 
 	def get_selected_engine:String=Builder.getcombo("enginescombo").get_selected
@@ -1756,6 +1776,9 @@ class GuiClass extends Application
 
 			Builder.getcomp("colorpgntext").node.asInstanceOf[WebView].setMinHeight(paneheight)
 			Builder.getcomp("colorpgntext").node.asInstanceOf[WebView].setMaxHeight(paneheight)
+
+			Builder.getcomp("enginestext").node.asInstanceOf[WebView].setMinHeight(paneheight)
+			Builder.getcomp("enginestext").node.asInstanceOf[WebView].setMaxHeight(paneheight)
 
 			val GAMES_STEP=((paneheight-70)/18).toInt
 

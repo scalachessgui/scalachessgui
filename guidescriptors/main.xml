@@ -125,6 +125,14 @@
 					</vbox>
 				</tab>
 				
+				<tab caption="Engines">
+					<vbox padding="5" gap="5">
+						<scrollpane id="enginesscrollpane" width="$panewidth">
+							<webview id="enginestext" height="400.0" width="$innerpanewidth"/>
+						</scrollpane>
+					</vbox>
+				</tab>
+				
 				<tab caption="Book">
 					<vbox padding="5" gap="5">
 						<hbox padding="5" gap="5">
