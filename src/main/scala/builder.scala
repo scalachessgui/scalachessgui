@@ -1058,6 +1058,13 @@ object Builder
 			select(what)
 		}
 
+		def addstore(what:String)
+		{
+			add(what)
+			val itemsdata=Data.fromList(items)
+			setcval_safe(s"$id#items",itemsdata)
+		}
+
 		def del(what:String)
 		{
 			if(what=="") return

@@ -521,6 +521,11 @@ class GuiClass extends Application
 
 		if(ev.kind=="combo selected")
 		{
+			if(ev.id=="enginescombo")
+			{
+				engine_selected
+			}
+
 			if(ev.id=="multipvcombo")
 			{
 				val running=engine.engine_running
@@ -1177,6 +1182,8 @@ class GuiClass extends Application
 
 			settings.set_variant_engine_path(path)
 
+			Builder.getcombo("enginescombo").addstore(path)
+
 			load_current_engine
 
 		}
@@ -1394,6 +1401,23 @@ class GuiClass extends Application
 		load_current_engine
 
 		init_board_patterns
+	}
+
+	def get_selected_engine:String=Builder.getcombo("enginescombo").get_selected
+
+	def engine_selected
+	{
+		val running=engine.engine_running
+
+		engine_stop
+
+		val path=get_selected_engine
+
+		settings.set_variant_engine_path(path)
+
+		load_current_engine
+
+		if(running) engine_start
 	}
 
 	def variant_selected(v:String=get_selected_variant)

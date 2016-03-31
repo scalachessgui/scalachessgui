@@ -117,6 +117,7 @@
 						<hbox padding="5" gap="5">
 							<label text="MultiPV"/>
 							<combo id="multipvcombo"/>
+							<combo id="enginescombo"/>
 						</hbox>
 						<scrollpane id="enginescrollpane" width="$panewidth">
 							<webview id="enginetext" height="1950.0" width="$innerpanewidth"/>
