@@ -28,6 +28,7 @@ import scala.io._
 ////////////////////////////////////////////////////////////////////
 
 import data._
+import settings._
 
 ////////////////////////////////////////////////////////////////////
 
@@ -206,6 +207,8 @@ object Builder
 	def cpath(id:String)=s"components#$id"
 	def spath(id:String)=s"settings#$id"
 	def ppath(profileid:String,name:String,id:String)=s"profiles#$profileid#$name#$id"
+	def vepath(v:String,id:String):String=s"variantentries#$v#$id"
+	def cvepath(id:String):String=vepath(settings.getvariant,id)
 
 	def getcomp(id:String):MyComponent=
 	{
@@ -346,6 +349,39 @@ object Builder
 		Data.get(values,cpath(id))
 	}
 
+	def getveval(v:String,id:String):Data=
+	{
+		Data.get(values,vepath(v,id))
+	}
+
+	def getvevals(v:String,id:String,default:String=""):String=
+	{
+		Data.gs(values,vepath(v,id),default)
+	}
+
+	def getcvevals(id:String,default:String=""):String=
+	{
+		Data.gs(values,cvepath(id),default)
+	}
+
+	def getvevall(v:String,id:String):List[String]=
+	{
+		val data=Data.get(values,vepath(v,id))
+		if(data==null) return List[String]()
+		if(data.isInstanceOf[SeqData]) return data.asInstanceOf[SeqData].toList
+		return List[String]()
+	}
+
+	def getcvevall(id:String):List[String]=
+	{
+		getvevall(settings.getvariant,id)
+	}
+
+	def getcveval(id:String):Data=
+	{
+		Data.get(values,cvepath(id))
+	}
+
 	def getpval(profileid:String,name:String,id:String):Data=
 	{
 		Data.get(values,ppath(profileid,name,id))
@@ -390,6 +426,26 @@ object Builder
 	def setcval(id:String,what:String)
 	{
 		setval(cpath(id),what)
+	}
+
+	def setveval(v:String,id:String,what:Data)
+	{
+		setval(vepath(v,id),what)
+	}
+
+	def setvevall(v:String,id:String,what:List[String])
+	{
+		setval(vepath(v,id),Data.fromList(what))
+	}
+
+	def setcveval(id:String,what:Data)
+	{
+		setval(cvepath(id),what)
+	}
+
+	def setcvevall(id:String,what:List[String])
+	{
+		setval(cvepath(id),Data.fromList(what))
 	}
 
 	def setcval(id:String,what:Data)

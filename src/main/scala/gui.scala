@@ -1182,7 +1182,11 @@ class GuiClass extends Application
 
 			settings.set_variant_engine_path(path)
 
-			Builder.getcombo("enginescombo").addstore(path)
+			val ecombo=Builder.getcombo("enginescombo")
+
+			ecombo.addstore(path)
+
+			Builder.setcvevall("engines",ecombo.items)
 
 			load_current_engine
 
@@ -1394,6 +1398,16 @@ class GuiClass extends Application
 
 	def get_selected_variant:String=Builder.getcombo("selectvariantcombo").get_selected
 
+	def init_enginescombo
+	{
+		val ep=settings.get_variant_engine_path()
+		val items=Builder.getcvevall("engines")
+
+		val ecombo=Builder.getcombo("enginescombo")
+		ecombo.create_from_list(items)
+		ecombo.add(ep)
+	}
+
 	def variant_changed
 	{
 		update
@@ -1401,6 +1415,8 @@ class GuiClass extends Application
 		load_current_engine
 
 		init_board_patterns
+
+		init_enginescombo
 	}
 
 	def get_selected_engine:String=Builder.getcombo("enginescombo").get_selected

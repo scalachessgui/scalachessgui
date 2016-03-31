@@ -93,6 +93,8 @@ case class SeqData(seq:Seq[Data]) extends Data
 			if(d!=null) d.toPrintable(level+1,buff) else Utils.tabs(level)+"!null").mkString("\n")
 		buff+Utils.tabs(level)+"seq"+(if(seq.length==0) "" else "\n"+seqPrintable)
 	}
+
+	def toList:List[String]=Data.toList(this)
 }
 case class MapData(map:Map[String,Data]) extends Data
 {
