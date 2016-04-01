@@ -36,7 +36,127 @@ case class GEngine(
 
 	val protocols=List("UCI","XBOARD")
 
+	var engineprocess:Process=null
+	var enginein:InputStream=null
+	var engineout:OutputStream=null
+	var enginereadthread:Thread=null
+
 	FromData(enginedata)
+
+	def Unload
+	{
+		if(enginereadthread!=null)
+		{
+			enginereadthread.interrupt()
+			enginereadthread=null
+		}
+		if(engineprocess!=null)
+		{
+			engineprocess.destroy()
+			engineprocess=null
+		}
+		enginein=null
+		engineout=null
+	}
+
+	def ProcessEngineOut(line:String)
+	{
+		println(line)
+	}
+
+	def IssueCommand(command:String)
+	{
+		println("issuecommand "+command)
+		try
+		{
+			engineout.write(command.getBytes())
+			engineout.flush()
+		}
+		catch
+		{
+			case e: Throwable =>
+			{
+				println(s"engine write IO exception, command: $command, id: $id, path: $path")
+			}
+		}
+	}
+
+	def CreateEngineReadThread:Thread={new Thread(new Runnable{def run{
+		var buffer=""
+		while (!Thread.currentThread().isInterrupted()){
+			try
+			{
+				val chunk:Char=enginein.read().toChar
+				if(chunk=='\n')
+				{
+					val len=buffer.length
+					if(len>0)
+					{
+						if(buffer(len-1)=='\r')
+						{
+							buffer=buffer.substring(0,len-1)
+						}
+					}
+					ProcessEngineOut(buffer)
+					buffer=""
+				} else {
+					buffer+=chunk
+				}
+			}
+			catch
+			{
+				case e: Throwable =>
+				{
+					println(s"engine read IO exception, id: $id, path: $path")
+				}
+			}
+		}
+	}})}
+
+	def ProtocolStartup
+	{
+		if(protocol=="UCI")
+		{
+			IssueCommand("uci\n")
+		}
+
+		if(protocol=="XBOARD")
+		{
+			IssueCommand("xboard\n")
+		}
+	}
+
+	def Load:Boolean=
+	{
+		Unload
+		val processbuilder=new ProcessBuilder(path)
+		val epf=new File(path)
+		if(epf.exists())
+		{
+			processbuilder.directory(new File(epf.getParent()))
+		}
+		else
+		{
+			return false
+		}
+		try
+		{
+			engineprocess=processbuilder.start()
+		}
+		catch
+		{
+			case e: Throwable =>
+			{
+				return false
+			}
+		}
+		enginein=engineprocess.getInputStream()
+        engineout=engineprocess.getOutputStream()
+        enginereadthread=CreateEngineReadThread
+        enginereadthread.start()
+        ProtocolStartup
+		return true
+	}
 
 	def ParseEngineNameFromPath(path:String):String=
 	{
@@ -103,6 +223,7 @@ case class GEngine(
 				"padding: 4px;"
 			s"""<span style='$style; cursor: pointer; font-size: 10px;' onmousedown="idstr='$id'; command='protocolselected'; param='$p';">$p</span>"""
 		}).mkString("\n")
+		val status=if(engineprocess==null) "<font color='red'>not active</font>" else "<font color='green'>active</font>"
 		s"""
 			|<div style="border-width: 2px; border-style: dotted; border-color: #afafaf; border-radius: 10px; margin: 3px;">
 			|<table>
@@ -111,10 +232,22 @@ case class GEngine(
 			|<tr>
 			|<td>name</td>
 			|<td><font color="red">$name</td>
+			|<td><input type="button" value="Load" onclick="idstr='$id'; command='load';"></td>
+			|<td><input type="button" value="Unload" onclick="idstr='$id'; command='unload';"></td>
+			|<td>status</td>
+			|<td>$status</td>
 			|<td>protocol</td>
-			|<td>
-			|$protocolselect
-			|</td>
+			|<td>$protocolselect</td>
+			|</tr>
+			|</table>
+			|</td></tr>
+			|<tr><td>
+			|<table>
+			|<tr>
+			|<td><input type="button" value="To top" onclick="idstr='$id'; command='top';"></td>
+			|<td><input type="button" value="Up" onclick="idstr='$id'; command='up';"></td>
+			|<td><input type="button" value="Down" onclick="idstr='$id'; command='down';"></td>
+			|<td><input type="button" value="To bottom" onclick="idstr='$id'; command='bottom';"></td>
 			|</tr>
 			|</table>
 			|</td></tr>
@@ -135,7 +268,7 @@ case class GEngine(
 
 case class GEngineList(var we:WebEngine=null)
 {
-	var enginelist=List[GEngine]()
+	var enginelist=Array[GEngine]()
 
 	def BrowsePath(id:Int)
 	{
@@ -169,6 +302,22 @@ case class GEngineList(var we:WebEngine=null)
 		enginelist=for(engine <- enginelist; if({ i+=1; i != id })) yield { j+=1; engine.SetId(j) }
 	}
 
+	def Move(id:Int,dir:Int):Boolean=
+	{
+		val last=enginelist.length-1
+		if(((id==0)&&(dir== -1))||((id==last)&&(dir==1))) return false
+		val temp=enginelist(id)
+		enginelist(id)=enginelist(id+dir).SetId(id)
+		enginelist(id+dir)=temp.SetId(id+dir)
+		true
+	}
+
+	def ToEdge(id:Int,dir:Int)
+	{
+		var i=id
+		while(Move(i,dir)){i+=dir}
+	}
+
 	def Handle
 	{
 		val command=we.executeScript("command").toString()
@@ -178,6 +327,30 @@ case class GEngineList(var we:WebEngine=null)
 		if(command=="add")
 		{
 			enginelist=enginelist:+GEngine(enginelist.length)
+			Update
+		}
+
+		if(command=="top")
+		{
+			ToEdge(idstr.toInt,-1)
+			Update
+		}
+
+		if(command=="up")
+		{
+			Move(idstr.toInt,-1)
+			Update
+		}
+
+		if(command=="down")
+		{
+			Move(idstr.toInt,1)
+			Update
+		}
+
+		if(command=="bottom")
+		{
+			ToEdge(idstr.toInt,1)
 			Update
 		}
 
@@ -196,6 +369,18 @@ case class GEngineList(var we:WebEngine=null)
 		if(command=="protocolselected")
 		{
 			enginelist(idstr.toInt).protocol=param
+			Update
+		}
+
+		if(command=="load")
+		{
+			enginelist(idstr.toInt).Load
+			Update
+		}
+
+		if(command=="unload")
+		{
+			enginelist(idstr.toInt).Unload
 			Update
 		}
 	}
@@ -219,12 +404,12 @@ case class GEngineList(var we:WebEngine=null)
 
 	def Load
 	{
-		enginelist=List[GEngine]()
+		enginelist=Array[GEngine]()
 		val enginelistdata=Builder.getcveval("enginelist").asInstanceOf[SeqData]
 		if(enginelistdata != null)
 		{
 			var i= -1
-			enginelist=for(enginedata<-enginelistdata.seq.toList) yield  { i+=1; GEngine(i,enginedata) }
+			enginelist=for(enginedata<-enginelistdata.seq.toArray) yield  { i+=1; GEngine(i,enginedata) }
 		}
 		Update
 	}
