@@ -1951,6 +1951,8 @@ class GuiClass extends Application
 		Builder.shutdown
 
 		engine.stop_engine_process
+
+		enginelist.UnloadAll
 	}
 
 }

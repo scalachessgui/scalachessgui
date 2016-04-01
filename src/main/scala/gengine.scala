@@ -41,6 +41,8 @@ case class GEngine(
 	var engineout:OutputStream=null
 	var enginereadthread:Thread=null
 
+	var autoload=false
+
 	FromData(enginedata)
 
 	def Unload
@@ -57,16 +59,16 @@ case class GEngine(
 		}
 		enginein=null
 		engineout=null
+		println(s"engine $path unloaded")
 	}
 
 	def ProcessEngineOut(line:String)
 	{
-		println(line)
+		
 	}
 
 	def IssueCommand(command:String)
 	{
-		println("issuecommand "+command)
 		try
 		{
 			engineout.write(command.getBytes())
@@ -155,6 +157,7 @@ case class GEngine(
         enginereadthread=CreateEngineReadThread
         enginereadthread.start()
         ProtocolStartup
+        println(s"engine $path loaded")
 		return true
 	}
 
@@ -204,6 +207,20 @@ case class GEngine(
 					protocol=protocoldata.asInstanceOf[StringData].value
 				}
 			}
+
+			val autoloaddata=Data.get(enginemapdata,"autoload")
+
+			if(autoloaddata != null)
+			{
+				if(autoloaddata.isInstanceOf[StringData])
+				{
+					autoload=false
+					if(autoloaddata.asInstanceOf[StringData].value=="true")
+					{
+						autoload=true
+					}
+				}
+			}
 		}
 	}
 
@@ -212,31 +229,41 @@ case class GEngine(
 		var mapdata=Map[String,Data]()
 		mapdata+=("path" -> StringData(path))
 		mapdata+=("protocol" -> StringData(protocol))
+		mapdata+=("autoload" -> StringData(""+autoload))
 		MapData(mapdata)
+	}
+
+	def SwitchAutoload
+	{
+		autoload= !autoload
 	}
 
 	def ReportHTML:String=
 	{
 		val name=ParseEngineNameFromPath(path)
 		val protocolselect=protocols.map(p =>{
-			val style=if(p==protocol) "background-color: #afffaf; border-style: solid; border-width: 1px; border-color: #afafaf; border-radius: 5px; padding: 3px;" else
+			val style=if(p==protocol) "background-color: #ffffaf; border-style: solid; border-width: 1px; border-color: #afafaf; border-radius: 5px; padding: 3px;" else
 				"padding: 4px;"
 			s"""<span style='$style; cursor: pointer; font-size: 10px;' onmousedown="idstr='$id'; command='protocolselected'; param='$p';">$p</span>"""
 		}).mkString("\n")
 		val status=if(engineprocess==null) "<font color='red'>not active</font>" else "<font color='green'>active</font>"
+		val autoloadbackground=if(autoload) "#ffffaf" else "#ffffff"
+		val divbackground=if(engineprocess!=null) "#afffaf" else "#ffafaf"
+		val autoloadstatus=if(autoload) "On" else "Off"
 		s"""
-			|<div style="border-width: 2px; border-style: dotted; border-color: #afafaf; border-radius: 10px; margin: 3px;">
+			|<div style="background-color: $divbackground; border-width: 2px; border-style: dotted; border-color: #afafaf; border-radius: 10px; margin: 3px;">
 			|<table>
 			|<tr><td>
 			|<table>
 			|<tr>
-			|<td>name</td>
-			|<td><font color="red">$name</td>
+			|<td class="italiclabel">name</td>
+			|<td style="padding-left: 3px; padding-right: 3px; border-style: dotted; border-radius: 5px; border-color: #7f7fff; font-size: 20px; font-weight: bold; color: #0000ff">$name</td>
 			|<td><input type="button" value="Load" onclick="idstr='$id'; command='load';"></td>
+			|<td><span onmousedown="idstr='$id'; command='autoload';" style="cursor: pointer; border-style: solid; border-width: 1px; border-radius: 5px; font-size: 12px; padding-left: 6px; padding-right: 9px; padding-top: 4px; padding-bottom: 4px; background-color: $autoloadbackground;">Auto Load $autoloadstatus</span></td>
 			|<td><input type="button" value="Unload" onclick="idstr='$id'; command='unload';"></td>
-			|<td>status</td>
-			|<td>$status</td>
-			|<td>protocol</td>
+			|<td class="italiclabel">status</td>
+			|<td><span style="border-style: solid; border-color: #000000; border-width: 1px; border-radius: 5px; padding-left: 3px; padding-right: 3px; padding-bottom: 2px;">$status</span></td>
+			|<td class="italiclabel">protocol</td>
 			|<td>$protocolselect</td>
 			|</tr>
 			|</table>
@@ -255,7 +282,7 @@ case class GEngine(
 			|<table>
 			|<tr>
 			|<td><input type="button" value="..." onclick="idstr='$id'; command='editpath';"></td>
-			|<td>path</td><td><font color='blue'>$path</font></td>
+			|<td class="italiclabel">path</td><td><font color='blue'>$path</font></td>
 			|<td><input type="button" value="Delete Engine" onclick="idstr='$id'; command='del';"></td>
 			|</tr>
 			|</table>
@@ -383,6 +410,12 @@ case class GEngineList(var we:WebEngine=null)
 			enginelist(idstr.toInt).Unload
 			Update
 		}
+
+		if(command=="autoload")
+		{
+			enginelist(idstr.toInt).SwitchAutoload
+			Update
+		}
 	}
 
 	def Update
@@ -402,8 +435,25 @@ case class GEngineList(var we:WebEngine=null)
 		})
 	}
 
+	def UnloadAll
+	{
+		for(engine<-enginelist)
+		{
+			engine.Unload
+		}
+	}
+
+	def LoadAllAuto
+	{
+		for(engine<-enginelist)
+		{
+			if(engine.autoload) engine.Load
+		}
+	}
+
 	def Load
 	{
+		UnloadAll
 		enginelist=Array[GEngine]()
 		val enginelistdata=Builder.getcveval("enginelist").asInstanceOf[SeqData]
 		if(enginelistdata != null)
@@ -411,6 +461,7 @@ case class GEngineList(var we:WebEngine=null)
 			var i= -1
 			enginelist=for(enginedata<-enginelistdata.seq.toArray) yield  { i+=1; GEngine(i,enginedata) }
 		}
+		LoadAllAuto
 		Update
 	}
 
@@ -429,14 +480,26 @@ case class GEngineList(var we:WebEngine=null)
 	{
 		val listhtml=enginelist.map(e => e.ReportHTML).mkString("\n")
 		s"""
+			|<html>
+			|<head>
+			|<style>
+			|.italiclabel {
+    		|	font-style: italic;
+    		|	font-size: 12px;
+			|}
+			|</style>
 			|<script>
 			|var command='';
 			|var idstr='0';
 			|var param='';
 			|</script>
+			|</head>
+			|<body>
 			|Under construction!<br>
 			|<input type="button" value="Add new engine" onclick="command='add';""><br>
 			|$listhtml
+			|</body>
+			|</html>
 		""".stripMargin
 	}
 }
