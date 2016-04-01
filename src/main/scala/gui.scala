@@ -50,13 +50,7 @@ class GuiClass extends Application
 
 	val scrollpanes=List("colorpgn","pgn","pgntree","move","engine","engines")
 
-	def update_enginelist(content:String)
-	{
-		//println(content)
-		Builder.setweb("enginestext",content)
-	}
-
-	val enginelist=GEngineList(update_enginelist)
+	var enginelist:GEngineList=null
 
 	def getpanewidth=Builder.gsd("panewidth",750.0)
 	def getinnerpanewidth=getpanewidth-30.0
@@ -406,7 +400,7 @@ class GuiClass extends Application
 
 	def enginesclicked
 	{
-		enginelist.Handle(Builder.getwebe("enginestext"))
+		enginelist.Handle
 	}
 
 	def bookclicked
@@ -1942,6 +1936,8 @@ class GuiClass extends Application
 		build_browsers
 
 		build_board
+
+		enginelist=GEngineList(Builder.getwebe("enginestext"))
 
 		///////////////////////////////////////////////////
 

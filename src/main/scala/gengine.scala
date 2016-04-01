@@ -32,8 +32,24 @@ case class GEngine(
 )
 {
 	var path:String=""
+	var protocol:String="UCI"
+
+	val protocols=List("UCI","XBOARD")
 
 	FromData(enginedata)
+
+	def ParseEngineNameFromPath(path:String):String=
+	{
+		val f=new File(path)
+		var engine_name=""
+		if(f.exists)
+		{
+			val engine_full_name=f.getName()
+			val engine_full_name_parts=engine_full_name.split("\\.").toList
+			engine_name=engine_full_name_parts.head
+		}
+		engine_name
+	}
 
 	def SetId(setid:Int):GEngine=
 	{
@@ -51,9 +67,22 @@ case class GEngine(
 
 			val pathdata=Data.get(enginemapdata,"path")
 
-			if(pathdata.isInstanceOf[StringData])
+			if(pathdata != null)
 			{
-				path=pathdata.asInstanceOf[StringData].value
+				if(pathdata.isInstanceOf[StringData])
+				{
+					path=pathdata.asInstanceOf[StringData].value
+				}
+			}
+
+			val protocoldata=Data.get(enginemapdata,"protocol")
+
+			if(protocoldata != null)
+			{
+				if(protocoldata.isInstanceOf[StringData])
+				{
+					protocol=protocoldata.asInstanceOf[StringData].value
+				}
 			}
 		}
 	}
@@ -62,24 +91,49 @@ case class GEngine(
 	{
 		var mapdata=Map[String,Data]()
 		mapdata+=("path" -> StringData(path))
+		mapdata+=("protocol" -> StringData(protocol))
 		MapData(mapdata)
 	}
 
 	def ReportHTML:String=
 	{
+		val name=ParseEngineNameFromPath(path)
+		val protocolselect=protocols.map(p =>{
+			val style=if(p==protocol) "background-color: #afffaf; border-style: solid; border-width: 1px; border-color: #afafaf; border-radius: 5px; padding: 3px;" else
+				"padding: 4px;"
+			s"""<span style='$style; cursor: pointer; font-size: 10px;' onmousedown="idstr='$id'; command='protocolselected'; param='$p';">$p</span>"""
+		}).mkString("\n")
 		s"""
+			|<div style="border-width: 2px; border-style: dotted; border-color: #afafaf; border-radius: 10px; margin: 3px;">
+			|<table>
+			|<tr><td>
+			|<table>
+			|<tr>
+			|<td>name</td>
+			|<td><font color="red">$name</td>
+			|<td>protocol</td>
+			|<td>
+			|$protocolselect
+			|</td>
+			|</tr>
+			|</table>
+			|</td></tr>
+			|<tr><td>
 			|<table>
 			|<tr>
 			|<td><input type="button" value="..." onclick="idstr='$id'; command='editpath';"></td>
 			|<td>path</td><td><font color='blue'>$path</font></td>
-			|<td><input type="button" value="X" onclick="idstr='$id'; command='del';"></td>
+			|<td><input type="button" value="Delete Engine" onclick="idstr='$id'; command='del';"></td>
 			|</tr>
 			|</table>
+			|</td></tr>
+			|</table>
+			|</div>
 		""".stripMargin
 	}
 }
 
-case class GEngineList(updatecallback:(String)=>Unit)
+case class GEngineList(var we:WebEngine=null)
 {
 	var enginelist=List[GEngine]()
 
@@ -115,12 +169,11 @@ case class GEngineList(updatecallback:(String)=>Unit)
 		enginelist=for(engine <- enginelist; if({ i+=1; i != id })) yield { j+=1; engine.SetId(j) }
 	}
 
-	def Handle(e:WebEngine)
+	def Handle
 	{
-		val command=e.executeScript("command").toString()
-		val idstr=e.executeScript("idstr").toString()
-
-		println("command: "+command+" idstr: "+idstr)
+		val command=we.executeScript("command").toString()
+		val idstr=we.executeScript("idstr").toString()
+		val param=we.executeScript("param").toString()
 
 		if(command=="add")
 		{
@@ -139,12 +192,29 @@ case class GEngineList(updatecallback:(String)=>Unit)
 			Del(idstr.toInt)
 			Update
 		}
+
+		if(command=="protocolselected")
+		{
+			enginelist(idstr.toInt).protocol=param
+			Update
+		}
 	}
 
 	def Update
 	{
-		updatecallback(ReportHTML)
 		Save
+		val content=ReportHTML
+		val st=we.executeScript("document.body.scrollTop").toString().toDouble
+		we.loadContent(content)
+		we.getLoadWorker().stateProperty().addListener(new ChangeListener[State]{
+	        def changed(ov: ObservableValue[_ <: State], oldState: State, newState: State)
+	        {
+                if (newState == State.SUCCEEDED)
+                {
+                	we.executeScript("window.scrollTo(" + 0 + ", " + st + ")");
+				}
+			}
+		})
 	}
 
 	def Load
@@ -177,6 +247,7 @@ case class GEngineList(updatecallback:(String)=>Unit)
 			|<script>
 			|var command='';
 			|var idstr='0';
+			|var param='';
 			|</script>
 			|Under construction!<br>
 			|<input type="button" value="Add new engine" onclick="command='add';""><br>
