@@ -28,7 +28,8 @@ import settings._
 
 case class GEngine(
 	var id:Int=0,
-	val enginedata:Data=null
+	val enginedata:Data=null,
+	val set_handler:Builder.THandler=null
 )
 {
 	var path:String=""
@@ -43,7 +44,72 @@ case class GEngine(
 
 	var autoload=false
 
+	val globalhandler=set_handler
+
 	FromData(enginedata)
+
+	def handler(ev:MyEvent)
+	{
+		globalhandler(ev)
+
+		if(ev.kind=="button pressed")
+		{
+			if(ev.id==s"$path#issueenginecommand")
+			{
+				IssueConsoleEngineCommand
+			}
+		}
+
+		if(ev.kind=="textfield entered")
+		{
+			if(ev.id==s"$path#enginecommand")
+			{
+				IssueConsoleEngineCommand
+			}
+		}
+	}
+
+	def IssueConsoleEngineCommand
+	{
+		val etext=Builder.gettext(s"$path#enginecommand")
+		val command=etext.getText
+		etext.setText("")
+		IssueCommand(command)
+	}
+
+	def Console
+	{
+		if(Builder.stages.contains(path))
+		{
+			Builder.closeStage(path)
+		} else {
+			val blob=s"""
+				|<scrollpane>
+				|<tabpane>
+				|<tab caption="Search output">
+				|<label text="search"/>
+				|</tab>
+				|<tab caption="Console">
+				|<vbox padding="5" gap="5">
+				|<hbox padding="5" gap="5">
+				|<textfield style="-fx-font-size: 18px; -fx-text-fill: #00007f;" id="$path#enginecommand"/>
+				|<button id="$path#issueenginecommand" text="Issue" style="round"/>
+				|</hbox>
+				|<scrollpane id="engineconsolescrollpane" width="800">
+				|<webview id="$path#engineconsoletext" height="600" width="3000"/>
+				|</scrollpane>
+				|</vbox>
+				|</tab>
+				|<tab caption="Settings">
+				|<label text="settings"/>
+				|</tab>
+				|</tabpane>
+				|</scrollpane>
+			""".stripMargin
+			Builder.MyStage(path,modal=false,set_handler=handler,title=ParseEngineNameFromPath(path)+" console",blob=blob)
+			log.Update
+		}
+	}
 
 	def Unload
 	{
@@ -64,15 +130,68 @@ case class GEngine(
 
 	def ProcessEngineOut(line:String)
 	{
-		
+		log.Add(LogItem(line,"out"))
 	}
+
+	case class LogItem(line:String,kind:String)
+	{
+		def ReportHTML:String=
+		{
+			val color=if(kind=="in") "#ff0000" else "#0000ff"
+			val mline=line.replaceAll("\\n","<br>")
+			s"""
+				|<font color="$color">$mline</font>
+			""".stripMargin
+		}
+	}
+
+	def UpdateConsoleLog(content:String)
+	{
+		val cwe=Builder.getwebe(s"$path#engineconsoletext")
+		if(cwe==null) return
+		cwe.loadContent(content)
+	}
+
+	case class Log(buffersize:Int=200)
+	{
+		var Items=List[LogItem]()
+
+		def Update
+		{
+			Platform.runLater(new Runnable{def run{
+				UpdateConsoleLog(ReportHTML)
+			}})
+		}
+
+		def Add(item:LogItem)
+		{
+			Items=Items:+item
+			while(Items.length>buffersize) Items=Items.tail
+			Update
+		}
+
+		def ReportHTML:String=
+		{
+			val itemshtml=Items.reverse.map(item => item.ReportHTML).mkString("<br>\n")
+			s"""
+				|<div style="font-family: monospace;">
+				|$itemshtml
+				|</div>
+			""".stripMargin
+		}
+	}
+
+	var log=Log()
 
 	def IssueCommand(command:String)
 	{
+		if(command==null) return
+		val fullcommand=command+"\n"
 		try
 		{
-			engineout.write(command.getBytes())
+			engineout.write(fullcommand.getBytes())
 			engineout.flush()
+			log.Add(LogItem(command,"in"))
 		}
 		catch
 		{
@@ -88,21 +207,24 @@ case class GEngine(
 		while (!Thread.currentThread().isInterrupted()){
 			try
 			{
-				val chunk:Char=enginein.read().toChar
-				if(chunk=='\n')
-				{
-					val len=buffer.length
-					if(len>0)
-					{
-						if(buffer(len-1)=='\r')
-						{
-							buffer=buffer.substring(0,len-1)
-						}
+				val chunkobj=enginein.read()
+				try
+				{ 
+					val chunk=chunkobj.toChar
+					if(chunk=='\n')
+					{						
+						ProcessEngineOut(buffer)
+						buffer=""
+					} else {
+						buffer+=chunk
 					}
-					ProcessEngineOut(buffer)
-					buffer=""
-				} else {
-					buffer+=chunk
+				}
+				catch
+				{
+					case e: Throwable => 
+					{
+						println(s"engine read not a char exception, chunk: $chunkobj, id: $id, path: $path")
+					}
 				}
 			}
 			catch
@@ -119,12 +241,12 @@ case class GEngine(
 	{
 		if(protocol=="UCI")
 		{
-			IssueCommand("uci\n")
+			IssueCommand("uci")
 		}
 
 		if(protocol=="XBOARD")
 		{
-			IssueCommand("xboard\n")
+			IssueCommand("xboard")
 		}
 	}
 
@@ -156,6 +278,7 @@ case class GEngine(
         engineout=engineprocess.getOutputStream()
         enginereadthread=CreateEngineReadThread
         enginereadthread.start()
+        Thread.sleep(100)
         ProtocolStartup
         println(s"engine $path loaded")
 		return true
@@ -250,6 +373,8 @@ case class GEngine(
 		val autoloadbackground=if(autoload) "#ffffaf" else "#ffffff"
 		val divbackground=if(engineprocess!=null) "#afffaf" else "#ffafaf"
 		val autoloadstatus=if(autoload) "On" else "Off"
+		val consoleopen=Builder.stages.contains(path)
+		val consoletext=if(consoleopen) "Close Console/Settings" else "Open Console/Settings"
 		s"""
 			|<div style="background-color: $divbackground; border-width: 2px; border-style: dotted; border-color: #afafaf; border-radius: 10px; margin: 3px;">
 			|<table>
@@ -275,6 +400,7 @@ case class GEngine(
 			|<td><input type="button" value="Up" onclick="idstr='$id'; command='up';"></td>
 			|<td><input type="button" value="Down" onclick="idstr='$id'; command='down';"></td>
 			|<td><input type="button" value="To bottom" onclick="idstr='$id'; command='bottom';"></td>
+			|<td><input type="button" value="$consoletext" onclick="idstr='$id'; command='console';"></td>
 			|</tr>
 			|</table>
 			|</td></tr>
@@ -296,6 +422,14 @@ case class GEngine(
 case class GEngineList(var we:WebEngine=null)
 {
 	var enginelist=Array[GEngine]()
+
+	def handler(ev:MyEvent)
+	{
+		if(ev.kind=="stage closed")
+		{
+			Update
+		}
+	}
 
 	def BrowsePath(id:Int)
 	{
@@ -351,9 +485,15 @@ case class GEngineList(var we:WebEngine=null)
 		val idstr=we.executeScript("idstr").toString()
 		val param=we.executeScript("param").toString()
 
+		if(command=="console")
+		{
+			enginelist(idstr.toInt).Console
+			Update
+		}
+
 		if(command=="add")
 		{
-			enginelist=enginelist:+GEngine(enginelist.length)
+			enginelist=enginelist:+GEngine(enginelist.length,set_handler=handler)
 			Update
 		}
 
@@ -459,7 +599,7 @@ case class GEngineList(var we:WebEngine=null)
 		if(enginelistdata != null)
 		{
 			var i= -1
-			enginelist=for(enginedata<-enginelistdata.seq.toArray) yield  { i+=1; GEngine(i,enginedata) }
+			enginelist=for(enginedata<-enginelistdata.seq.toArray) yield  { i+=1; GEngine(i,enginedata,set_handler=handler) }
 		}
 		LoadAllAuto
 		Update

@@ -71,6 +71,11 @@ object Tag
 	{
 		parseXML(scala.xml.XML.loadFile(path))
 	}
+
+	def XMLfromString(content:String):Tag=
+	{
+		parseXML(scala.xml.XML.loadString(content))
+	}
 }
 
 sealed trait Data

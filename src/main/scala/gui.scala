@@ -516,6 +516,14 @@ class GuiClass extends Application
 	def handler(ev:MyEvent)
 	{
 		Builder.default_handler(ev)
+
+		if(ev.kind=="stage closed")
+		{
+			if(ev.id=="main")
+			{
+				Builder.CloseAllStages
+			}
+		}
 		
 		if(ev.kind=="checkbox changed")
 		{

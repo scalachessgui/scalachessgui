@@ -202,6 +202,7 @@ object Builder
 	{
 		Data.saveXML(values,dpath("values"))
 		Data.saveXMLPretty(values,dpath("valuespretty"))
+		CloseAllStages
 	}
 
 	def cpath(id:String)=s"components#$id"
@@ -505,10 +506,13 @@ object Builder
 		do_size:Boolean=true,
 		unclosable:Boolean=false,
 		modal:Boolean=false,
-		title:String=null
+		title:String=null,
+		blob:String=null
 	)
 	{
 		val s=set_stage
+
+		val handler=set_handler
 
 		s.setTitle(
 				if(title!=null) title else Data.gs(values,s"stages#$id#title","")
@@ -565,7 +569,7 @@ object Builder
 
 		if(do_build)
 		{
-			val p=build(dpath(id),set_handler)
+			val p=build(dpath(id),set_handler,blob)
 
 			s.setScene(new Scene(p))
 		}
@@ -582,6 +586,15 @@ object Builder
 				def handle(ev:WindowEvent)
 				{
 					ev.consume()
+				}
+			})
+		} else {
+			s.setOnCloseRequest(new EventHandler[WindowEvent]
+			{
+				def handle(ev:WindowEvent)
+				{
+					RemoveStage(id)
+					handler(new MyEvent(id,"stage closed"))
 				}
 			})
 		}
@@ -616,6 +629,14 @@ object Builder
 		}
 	}
 
+	def RemoveStage(id:String)
+	{
+		if(stages.contains(id))
+		{
+			stages-=id
+		}
+	}
+
 	def closeStage(id:String)
 	{
 		if(stages.contains(id))
@@ -623,7 +644,14 @@ object Builder
 			val stage=stages(id)
 
 			stage.close
+
+			RemoveStage(id)
 		}
+	}
+
+	def CloseAllStages
+	{
+		for((id,stage)<-stages) closeStage(id)
 	}
 
 	var profiles=Map[String,Profile]()
@@ -1622,9 +1650,9 @@ object Builder
 		node
 	}
 
-	def build(path:String,handler:THandler=default_handler):Parent=
+	def build(path:String,handler:THandler=default_handler,blob:String=null):Parent=
 	{
-		val t=Tag.loadXML(path)
+		val t=if(blob==null) Tag.loadXML(path) else Tag.XMLfromString(blob)
 
 		val c=build_mycomponent_recursive(null,handler)(t)
 
