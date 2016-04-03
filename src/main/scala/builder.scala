@@ -627,6 +627,11 @@ object Builder
 		{
 			s.setHeight(h)
 		}
+
+		def ToTop
+		{
+			s.toFront()
+		}
 	}
 
 	def RemoveStage(id:String)

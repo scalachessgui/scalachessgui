@@ -59,7 +59,12 @@ case class GEngine(
 		{
 			val wasrunning=running
 			if(running) Stop
-			IssueCommand("setoption name MultiPV value "+multipv)
+			if(IsAtomkraft)
+			{
+				IssueCommand("3\n"+set_multipv)
+			} else {
+				IssueCommand("setoption name MultiPV value "+multipv)
+			}
 			if(wasrunning) Start(g)
 		}
 	}
@@ -98,7 +103,53 @@ case class GEngine(
 		if(Builder.stages.contains(path))
 		{
 			Builder.closeStage(path)
+		}
+	}
+
+	def OpenConsole
+	{
+		if(engineprocess==null)
+		{
+			CloseConsole
+			return
+		}
+
+		if(Builder.stages.contains(path))
+		{
+			Builder.stages(path).ToTop
+			return
 		}	
+
+		val blob=s"""
+			|<scrollpane>
+			|<tabpane>
+			|<tab caption="Search output">
+			|<scrollpane id="engineoutscrollpane" width="800">
+			|<webview id="$path#engineouttext" height="3000" width="3000"/>
+			|</scrollpane>
+			|</tab>
+			|<tab caption="Console">
+			|<vbox padding="5" gap="5">
+			|<hbox padding="5" gap="5">
+			|<textfield style="-fx-font-size: 18px; -fx-text-fill: #00007f;" id="$path#enginecommand"/>
+			|<button id="$path#issueenginecommand" text="Issue" style="round"/>
+			|</hbox>
+			|<scrollpane id="engineconsolescrollpane" width="800">
+			|<webview id="$path#engineconsoletext" height="3000" width="3000"/>
+			|</scrollpane>
+			|</vbox>
+			|</tab>
+			|<tab caption="Settings">
+			|<scrollpane id="enginesettingsscrollpane" width="800">
+			|<vbox id="$path#enginesettingsvbox" height="3000" width="3000"/>
+			|</scrollpane>
+			|</tab>
+			|</tabpane>
+			|</scrollpane>
+		""".stripMargin
+		Builder.MyStage(path,modal=false,set_handler=handler,title=ParseEngineNameFromPath(path)+" console",blob=blob)
+		BuildOptions
+		log.Update
 	}
 
 	def Console
@@ -110,38 +161,9 @@ case class GEngine(
 		}
 		if(Builder.stages.contains(path))
 		{
-			Builder.closeStage(path)
+			CloseConsole
 		} else {
-			val blob=s"""
-				|<scrollpane>
-				|<tabpane>
-				|<tab caption="Search output">
-				|<scrollpane id="engineoutscrollpane" width="800">
-				|<webview id="$path#engineouttext" height="3000" width="3000"/>
-				|</scrollpane>
-				|</tab>
-				|<tab caption="Console">
-				|<vbox padding="5" gap="5">
-				|<hbox padding="5" gap="5">
-				|<textfield style="-fx-font-size: 18px; -fx-text-fill: #00007f;" id="$path#enginecommand"/>
-				|<button id="$path#issueenginecommand" text="Issue" style="round"/>
-				|</hbox>
-				|<scrollpane id="engineconsolescrollpane" width="800">
-				|<webview id="$path#engineconsoletext" height="3000" width="3000"/>
-				|</scrollpane>
-				|</vbox>
-				|</tab>
-				|<tab caption="Settings">
-				|<scrollpane id="enginesettingsscrollpane" width="800">
-				|<vbox id="$path#enginesettingsvbox" height="3000" width="3000"/>
-				|</scrollpane>
-				|</tab>
-				|</tabpane>
-				|</scrollpane>
-			""".stripMargin
-			Builder.MyStage(path,modal=false,set_handler=handler,title=ParseEngineNameFromPath(path)+" console",blob=blob)
-			BuildOptions
-			log.Update
+			OpenConsole
 		}
 	}
 
@@ -171,6 +193,20 @@ case class GEngine(
 		var defaultstr:String=""
 	)
 	{
+		def Apply
+		{
+			if(kind!="button")
+			{
+				val id=s"engineoptions#$path#$name"
+
+				var value=Builder.getcvevals(id,defaultstr)
+
+				if((kind=="spin")&&(value!=defaultstr)) value=""+value.toDouble.toInt
+
+				IssueCommand("setoption name "+name+" value "+value)
+			}
+		}
+
 		def ParseLine(line:String):Option=
 		{
 			val tokenizer=Tokenizer(line)
@@ -295,6 +331,11 @@ case class GEngine(
 			val content=(for(option<-options) yield option.ReportXML).mkString("\n")
 			content
 		}
+
+		def ApplyAll
+		{
+			for(option<-options) option.Apply
+		}
 	}
 
 	def GetNameFromId(id:String):String=
@@ -331,6 +372,7 @@ case class GEngine(
 						if(guivalue.isInstanceOf[StringData])
 						{
 							value=guivalue.asInstanceOf[StringData].value
+							Builder.setcveval(truepath,StringData(value))
 						}
 					}
 				}
@@ -390,11 +432,12 @@ case class GEngine(
 			if(head=="uciok")
 			{
 				startup=false
+				options.ApplyAll
 			} else {
 				val option=Option().ParseLine(line)
 				if(option!=null)
 				{					
-					options.Add(option)
+					options.Add(option)					
 				}
 			}
 		}
@@ -545,9 +588,10 @@ case class GEngine(
 		}
 
 		var cnt=0
-		while((startup)&&(cnt< 100))
+		while((startup)&&(cnt< 50))
 		{
 			Thread.sleep(100)
+			cnt+=1
 		}
 
 		startup=false
@@ -728,17 +772,34 @@ case class GEngine(
 
 	var startup=false
 
+	val clip=Clipboard.getSystemClipboard()
+
+	def IsAtomkraft:Boolean=(ParseEngineNameFromPath(path)=="atomkraft")
+
 	def Start(g:game)
 	{
 		if(engineprocess==null) return
 		if(startup) return
 		if(running) return
 		thinkingoutput=ThinkingOutput()
+		OpenConsole
 		if(protocol=="UCI")
 		{
 			val fen=g.report_fen
-			IssueCommand("position fen "+fen)
-			IssueCommand("go infinite")
+			if(IsAtomkraft)
+			{
+				val content = new ClipboardContent()
+                content.putString(fen)
+                clip.setContent(content)
+                
+                IssueCommand("1\n4")
+			}
+			else
+			{
+				IssueCommand("position fen "+fen)
+				IssueCommand("go infinite")
+			}
+			
 			running=true
 		}
 	}
@@ -753,7 +814,12 @@ case class GEngine(
 		if(protocol=="UCI")
 		{
 			bestmovereceived=false
-			IssueCommand("stop")
+			if(IsAtomkraft)
+			{
+				IssueCommand("s")
+			} else {
+				IssueCommand("stop")
+			}
 			while(!bestmovereceived)
 			{
 				Thread.sleep(50)
@@ -1009,11 +1075,14 @@ case class GEngine(
 		def ParseLine(line:String)
 		{
 			val pvitem=PvItem().ParseLine(line)
-			val multipv=if(pvitem.hasmultipv) pvitem.multipv else { maxmultipv+=1 ; maxmultipv }
+			if(pvitem.haspv)
+			{
+				val multipv=if(pvitem.hasmultipv) pvitem.multipv else { maxmultipv+=1 ; maxmultipv }
 
-			if(!pvitems.contains(multipv)) pvitems+=(multipv->PvItem())
+				if(!pvitems.contains(multipv)) pvitems+=(multipv->PvItem())
 
-			pvitems+=(multipv->pvitems(multipv).UpdateWith(pvitem))
+				pvitems+=(multipv->pvitems(multipv).UpdateWith(pvitem))
+			}
 		}
 
 		def ReportHTML:String=
@@ -1088,6 +1157,7 @@ case class GEngineList(var we:WebEngine=null)
 	def StartAll(g:game)
 	{
 		for(engine<-enginelist) engine.Start(g)
+		Update
 	}
 
 	def StopAll()
