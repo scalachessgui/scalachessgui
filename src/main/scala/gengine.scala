@@ -23,6 +23,7 @@ import java.io._
 import data._
 import builder._
 import settings._
+import game._
 
 ////////////////////////////////////////////////////////////////////
 
@@ -131,6 +132,12 @@ case class GEngine(
 	def ProcessEngineOut(line:String)
 	{
 		log.Add(LogItem(line,"out"))
+
+		val pvitem=PvItem().ParseLine(line)
+		if(pvitem.haspv)
+		{
+			println(pvitem.AsString)
+		}
 	}
 
 	case class LogItem(line:String,kind:String)
@@ -417,11 +424,219 @@ case class GEngine(
 			|</div>
 		""".stripMargin
 	}
+
+	var running=false
+
+	def Start(g:game)
+	{
+		if(engineprocess==null) return
+		if(protocol=="UCI")
+		{
+			val fen=g.report_fen
+			IssueCommand("position fen "+fen)
+			IssueCommand("go infinite")
+			running=true
+		}
+	}
+
+	def Stop
+	{
+		if(engineprocess==null) return
+		if(protocol=="UCI")
+		{
+			IssueCommand("stop")
+			running=false
+		}
+	}
+
+	def CheckRestart(g:game)
+	{
+		if(engineprocess==null) return
+		if(running)
+		{
+			Stop
+			Start(g)
+		}
+	}
+
+	def Strip(line:String):String=
+	{
+		var sline=line
+		sline=sline.replaceAll("\\r|\\n|^\\s+|\\s+$","")
+		sline=sline.replaceAll("\\s+"," ")
+		sline
+	}
+
+	def Tokens(line:String):List[String]=
+	{
+		Strip(line).split(" ").toList
+	}
+
+	case class Tokenizer(line:String="")
+	{
+		var tokens=Tokens(line)
+
+		def Get:String=
+		{
+			if(tokens.length>0)
+			{
+				val token=tokens.head
+				tokens=tokens.tail
+				return token
+			}
+			return null
+		}
+
+		def GetRest:String=
+		{
+			if(tokens.length>0)
+			{
+				val str=tokens.mkString(" ")
+				tokens=List[String]()
+				return str
+			}
+			return null
+		}
+
+		def HasToken:Boolean=
+		{
+			tokens.length>0
+		}
+	}
+
+	def ParseInt(str:String,default:Int):Int=
+	{
+		if(str==null) return default
+		try
+		{
+			val intvalue=str.toInt
+			return intvalue
+		}
+		catch{case e: Throwable => {}}
+		return default
+	}
+
+	case class PvItem(
+		var multipv:Int=0,
+		var depth:Int=0,
+		var hasdepth:Boolean=false,
+		var nodes:Int=0,
+		var hasnodes:Boolean=false,
+		var time:Int=0,
+		var hastime:Boolean=false,
+		var nps:Int=0,
+		var hasnps:Boolean=false,
+		var scorestr:String="",
+		var scorekind:String="",
+		var scorecp:Int=0,
+		var scoremate:Int=0,
+		var scorenumerical:Int=0,
+		var signedscorenumerical:String="",
+		var hasscore:Boolean=false,
+		var pv:String="",
+		var pvrest:List[String]=List[String](),
+		var pvreststr:String="",
+		var haspv:Boolean=false,
+		var bestmove:String=""
+	)
+	{
+		def AsString:String=
+		{
+			s"$bestmove $signedscorenumerical depth $depth nodes $nodes nps $nps pv $pvreststr"
+		}
+		def ParseLine(line:String):PvItem=
+		{
+			val tokenizer=Tokenizer(line)
+			if(protocol=="UCI")
+			{
+				if(!tokenizer.HasToken) return this
+				if(tokenizer.Get!="info") return this
+				while(tokenizer.HasToken)
+				{
+					val name=tokenizer.Get
+					if(name=="multipv")
+					{
+						multipv=ParseInt(tokenizer.Get,multipv)
+					}
+					if(name=="score")
+					{
+						val kind=tokenizer.Get
+						val value=ParseInt(tokenizer.Get,if(kind=="mate") scoremate else scorecp)
+						scorestr=kind+" "+value
+						if(kind=="mate")
+						{
+							scoremate=value
+							if(value>=0)
+							{
+								scorenumerical=10000-value
+							} else {
+								scorenumerical= -10000+value
+							}
+						} else {
+							scorecp=value
+							scorenumerical=value
+						}
+						signedscorenumerical=if(scorenumerical>0) "+"+scorenumerical else ""+scorenumerical
+						scorekind=kind
+						hasscore=true
+					}
+					if(name=="depth")
+					{
+						depth=ParseInt(tokenizer.Get,depth)
+						hasdepth=true
+					}
+					if(name=="nodes")
+					{
+						nodes=ParseInt(tokenizer.Get,nodes)
+						hasnodes=true
+					}
+					if(name=="nps")
+					{
+						nps=ParseInt(tokenizer.Get,nps)
+						hasnps=true
+					}
+					if(name=="time")
+					{
+						depth=ParseInt(tokenizer.Get,time)
+						hasdepth=true
+					}
+					if(name=="pv")
+					{
+						pv=tokenizer.GetRest
+						if(pv!=null)
+						{
+							haspv=true
+							val pvtokens=Tokens(pv)
+							bestmove=pvtokens.head
+							pvrest=pvtokens.tail
+							pvreststr=pvrest.mkString(" ")
+						}
+					}
+				}
+			}
+			return this
+		}
+	}
 }
 
 case class GEngineList(var we:WebEngine=null)
 {
 	var enginelist=Array[GEngine]()
+
+	def StartAll(g:game)
+	{
+		for(engine<-enginelist) engine.Start(g)
+	}
+
+	def StopAll()
+	{
+		for(engine<-enginelist) engine.Stop
+	}
+
+	def CheckRestartAll(g:game)
+	{
+		for(engine<-enginelist) engine.CheckRestart(g)
+	}
 
 	def handler(ev:MyEvent)
 	{

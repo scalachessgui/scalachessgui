@@ -1144,12 +1144,17 @@ class GuiClass extends Application
 		engine.fen=commands.g.report_fen
 		engine.go()
 
+		enginelist.StartAll(commands.g)
+
 		selecttab("Engine")
 	}
 
 	def engine_stop()
 	{
 		engine.stop()
+
+		enginelist.StopAll
+
 		Platform.runLater(new Runnable{def run{gb.clear_score}})
 	}
 
@@ -1891,6 +1896,11 @@ class GuiClass extends Application
 			{
 				gb.clear_engine
 				gb.clear_score
+			}
+
+			if(enginelist!=null)
+			{
+				enginelist.CheckRestartAll(commands.g)
 			}
 
 		}
