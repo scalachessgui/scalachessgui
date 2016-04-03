@@ -49,6 +49,21 @@ case class GEngine(
 
 	FromData(enginedata)
 
+	var multipv=1
+
+	def SetMultipv(set_multipv:Int,g:game)
+	{
+		multipv=set_multipv
+
+		if(protocol=="UCI")
+		{
+			val wasrunning=running
+			if(running) Stop
+			IssueCommand("setoption name MultiPV value "+multipv)
+			if(wasrunning) Start(g)
+		}
+	}
+
 	def handler(ev:MyEvent)
 	{
 		globalhandler(ev)
@@ -88,7 +103,9 @@ case class GEngine(
 				|<scrollpane>
 				|<tabpane>
 				|<tab caption="Search output">
-				|<label text="search"/>
+				|<scrollpane id="engineoutscrollpane" width="800">
+				|<webview id="$path#engineouttext" height="3000" width="3000"/>
+				|</scrollpane>
 				|</tab>
 				|<tab caption="Console">
 				|<vbox padding="5" gap="5">
@@ -97,7 +114,7 @@ case class GEngine(
 				|<button id="$path#issueenginecommand" text="Issue" style="round"/>
 				|</hbox>
 				|<scrollpane id="engineconsolescrollpane" width="800">
-				|<webview id="$path#engineconsoletext" height="600" width="3000"/>
+				|<webview id="$path#engineconsoletext" height="3000" width="3000"/>
 				|</scrollpane>
 				|</vbox>
 				|</tab>
@@ -133,10 +150,12 @@ case class GEngine(
 	{
 		log.Add(LogItem(line,"out"))
 
-		val pvitem=PvItem().ParseLine(line)
-		if(pvitem.haspv)
+		thinkingoutput.ParseLine(line)
+
+		if(protocol=="UCI")
 		{
-			println(pvitem.AsString)
+			val token=Tokenizer(line).Get
+			if(token=="bestmove") bestmovereceived=true
 		}
 	}
 
@@ -285,7 +304,6 @@ case class GEngine(
         engineout=engineprocess.getOutputStream()
         enginereadthread=CreateEngineReadThread
         enginereadthread.start()
-        Thread.sleep(100)
         ProtocolStartup
         println(s"engine $path loaded")
 		return true
@@ -430,6 +448,8 @@ case class GEngine(
 	def Start(g:game)
 	{
 		if(engineprocess==null) return
+		if(running) return
+		thinkingoutput=ThinkingOutput()
 		if(protocol=="UCI")
 		{
 			val fen=g.report_fen
@@ -439,12 +459,20 @@ case class GEngine(
 		}
 	}
 
+	var bestmovereceived=false
+
 	def Stop
 	{
 		if(engineprocess==null) return
+		if(!running) return
 		if(protocol=="UCI")
 		{
+			bestmovereceived=false
 			IssueCommand("stop")
+			while(!bestmovereceived)
+			{
+				Thread.sleep(50)
+			}
 			running=false
 		}
 	}
@@ -518,13 +546,16 @@ case class GEngine(
 
 	case class PvItem(
 		var multipv:Int=0,
+		var hasmultipv:Boolean=false,
 		var depth:Int=0,
 		var hasdepth:Boolean=false,
 		var nodes:Int=0,
+		var nodesverbal:String="",
 		var hasnodes:Boolean=false,
 		var time:Int=0,
 		var hastime:Boolean=false,
 		var nps:Int=0,
+		var npsverbal:String="",
 		var hasnps:Boolean=false,
 		var scorestr:String="",
 		var scorekind:String="",
@@ -532,6 +563,7 @@ case class GEngine(
 		var scoremate:Int=0,
 		var scorenumerical:Int=0,
 		var signedscorenumerical:String="",
+		var scoreverbal:String="",
 		var hasscore:Boolean=false,
 		var pv:String="",
 		var pvrest:List[String]=List[String](),
@@ -557,6 +589,7 @@ case class GEngine(
 					if(name=="multipv")
 					{
 						multipv=ParseInt(tokenizer.Get,multipv)
+						hasmultipv=true
 					}
 					if(name=="score")
 					{
@@ -577,6 +610,7 @@ case class GEngine(
 							scorenumerical=value
 						}
 						signedscorenumerical=if(scorenumerical>0) "+"+scorenumerical else ""+scorenumerical
+						scoreverbal=if(kind=="mate") "mate "+scoremate else signedscorenumerical
 						scorekind=kind
 						hasscore=true
 					}
@@ -585,20 +619,28 @@ case class GEngine(
 						depth=ParseInt(tokenizer.Get,depth)
 						hasdepth=true
 					}
+					def FormatNodes(nodes:Int,unit:Int):String=
+					{
+						"%.2f".format(nodes.toDouble/unit.toDouble)
+					}
 					if(name=="nodes")
 					{
 						nodes=ParseInt(tokenizer.Get,nodes)
+						if(nodes< 1000) nodesverbal=""+nodes else
+						if(nodes< 1000000) nodesverbal=""+FormatNodes(nodes,1000)+" kN" else nodesverbal=FormatNodes(nodes,1000000)+" MN"
 						hasnodes=true
 					}
 					if(name=="nps")
 					{
 						nps=ParseInt(tokenizer.Get,nps)
+						if(nps< 1000) npsverbal=""+nps else
+						if(nps< 1000000) npsverbal=""+FormatNodes(nps,1000)+" kN/s" else npsverbal=FormatNodes(nps,1000000)+" MN/s"
 						hasnps=true
 					}
 					if(name=="time")
 					{
-						depth=ParseInt(tokenizer.Get,time)
-						hasdepth=true
+						time=ParseInt(tokenizer.Get,time)
+						hastime=true
 					}
 					if(name=="pv")
 					{
@@ -616,12 +658,137 @@ case class GEngine(
 			}
 			return this
 		}
+
+		def UpdateWith(ui:PvItem):PvItem=
+		{
+			if(ui.hasmultipv) multipv=ui.multipv ; hasmultipv=true
+			if(ui.hasdepth) depth=ui.depth ; hasdepth=true
+			if(ui.hasnodes) nodes=ui.nodes ; hasnodes=true
+			if(ui.hastime) time=ui.time ; hastime=true
+			if(ui.hasnps) nps=ui.nps ; hasnps=true
+			if(ui.haspv)
+			{
+				pv=ui.pv
+				pvrest=ui.pvrest
+				pvreststr=ui.pvreststr
+				bestmove=ui.bestmove
+				haspv=true
+			}
+			if(ui.hasscore)
+			{
+				scorestr=ui.scorestr
+				scorekind=ui.scorekind
+				scorecp=ui.scorecp
+				scoremate=ui.scoremate
+				scorenumerical=ui.scorenumerical
+				signedscorenumerical=ui.signedscorenumerical
+				scoreverbal=ui.scoreverbal
+				nodesverbal=ui.nodesverbal
+				npsverbal=ui.npsverbal
+				hasscore=true
+			}
+			return this
+		}
+
+		def ReportHTMLTableRow:String=
+		{
+			val scorecolor=if(scorenumerical>=0) "#007f00" else "#7f0000"
+			s"""
+			|<tr>
+			|<td><font color="blue">$bestmove</font></td>
+			|<td><font color="$scorecolor">$scoreverbal</font></td>
+			|<td>$depth</td>
+			|<td>$nodesverbal</td>
+			|<td>$npsverbal</td>
+			|<td><font color="#00007f">$pvreststr</font></td>
+			|</tr>
+			""".stripMargin
+		}
+	}
+
+	case class DepthItem(depth:Int=1)
+	{
+		var maxmultipv=1
+		var pvitems=Map[Int,PvItem]()
+
+		def ParseLine(line:String)
+		{
+			val pvitem=PvItem().ParseLine(line)
+			val multipv=if(pvitem.hasmultipv) pvitem.multipv else { maxmultipv+=1 ; maxmultipv }
+
+			if(!pvitems.contains(multipv)) pvitems+=(multipv->PvItem())
+
+			pvitems+=(multipv->pvitems(multipv).UpdateWith(pvitem))
+		}
+
+		def ReportHTML:String=
+		{
+			val multipvs=pvitems.keys.toList.sorted
+			val multipvscontent=(for(multipv<-multipvs) yield pvitems(multipv).ReportHTMLTableRow).mkString("\n")
+			s"""
+				|<table cellpadding=3 cellspacing=3>
+				|<tr>
+				|<td>Move</td>
+				|<td>Score</td>
+				|<td>Depth</td>
+				|<td>Nodes</td>
+				|<td>Nps</td>
+				|<td>Pv</td>
+				|</tr>
+				|$multipvscontent
+				|</table>
+			""".stripMargin
+		}
+	}
+
+	var thinkingoutput=ThinkingOutput()
+
+	case class ThinkingOutput()
+	{
+		var maxdepth=1
+		var depthitems=Map[Int,DepthItem]()
+
+		def UpdateEngineOut(content:String)
+		{
+			val cwe=Builder.getwebe(s"$path#engineouttext")
+			if(cwe==null) return
+			cwe.loadContent(content)
+		}
+
+		def ParseLine(line:String)
+		{
+			val pvitem=PvItem().ParseLine(line)
+			val depth=if(pvitem.hasdepth) pvitem.depth else maxdepth
+			if(depth>maxdepth) maxdepth=depth
+			if(!depthitems.contains(depth)) depthitems+=(depth->DepthItem(depth))
+			depthitems(depth).ParseLine(line)
+			Platform.runLater(new Runnable{def run{
+				UpdateEngineOut(ReportHTML)
+			}})
+		}
+
+		def ReportHTML:String=
+		{
+			val depths=depthitems.keys.toList.sorted.reverse
+			val depthscontent=(for(depth<-depths) yield depthitems(depth).ReportHTML).mkString("<hr>")
+			s"""
+				|$depthscontent
+			""".stripMargin
+		}
 	}
 }
 
 case class GEngineList(var we:WebEngine=null)
 {
 	var enginelist=Array[GEngine]()
+
+	var multipv=1
+
+	def SetMultipv(set_multipv:Int,g:game)
+	{
+		multipv=set_multipv
+		for(engine<-enginelist) engine.SetMultipv(multipv,g)
+	}
 
 	def StartAll(g:game)
 	{

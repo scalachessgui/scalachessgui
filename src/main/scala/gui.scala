@@ -1222,6 +1222,8 @@ class GuiClass extends Application
 	def set_multipv(mpv:Int)
 	{
 		engine.set_multipv(mpv)
+
+		enginelist.SetMultipv(mpv,commands.g)
 	}
 
 	// collect the ids of engine option update widgets
@@ -1444,6 +1446,8 @@ class GuiClass extends Application
 		init_enginescombo
 
 		enginelist.Load
+
+		enginelist.SetMultipv(get_multipv,commands.g)
 	}
 
 	def get_selected_engine:String=Builder.getcombo("enginescombo").get_selected
@@ -1964,13 +1968,31 @@ class GuiClass extends Application
 
 	override def stop()
 	{
+		println("application stop method")
+
+		print("shutting down command ... ")
+
 		commands.shutdown
 
+		println("done")
+
+		print("shutting down builder ... ")
+
 		Builder.shutdown
+
+		println("done")
+
+		print("stopping engines ... ")
 
 		engine.stop_engine_process
 
 		enginelist.UnloadAll
+
+		println("done")
+
+		println("application stopped ok, will quit in 10 seconds")
+
+		Thread.sleep(10000)
 	}
 
 }
