@@ -93,8 +93,21 @@ case class GEngine(
 		IssueCommand(command)
 	}
 
+	def CloseConsole
+	{
+		if(Builder.stages.contains(path))
+		{
+			Builder.closeStage(path)
+		}	
+	}
+
 	def Console
 	{
+		if(engineprocess==null)
+		{
+			CloseConsole
+			return
+		}
 		if(Builder.stages.contains(path))
 		{
 			Builder.closeStage(path)
@@ -119,12 +132,15 @@ case class GEngine(
 				|</vbox>
 				|</tab>
 				|<tab caption="Settings">
-				|<label text="settings"/>
+				|<scrollpane id="enginesettingsscrollpane" width="800">
+				|<vbox id="$path#enginesettingsvbox" height="3000" width="3000"/>
+				|</scrollpane>
 				|</tab>
 				|</tabpane>
 				|</scrollpane>
 			""".stripMargin
 			Builder.MyStage(path,modal=false,set_handler=handler,title=ParseEngineNameFromPath(path)+" console",blob=blob)
+			BuildOptions
 			log.Update
 		}
 	}
@@ -143,14 +159,259 @@ case class GEngine(
 		}
 		enginein=null
 		engineout=null
+		CloseConsole
 		println(s"engine $path unloaded")
+	}
+
+	case class Option(
+		var name:String="",
+		var kind:String="",
+		var minstr:String="",
+		var maxstr:String="",
+		var defaultstr:String=""
+	)
+	{
+		def ParseLine(line:String):Option=
+		{
+			val tokenizer=Tokenizer(line)
+			val head=tokenizer.Poll
+			if(head==null) return null
+
+			if(protocol=="UCI")
+			{
+				if(tokenizer.Get!="option") return null
+
+				val reservedtokens=List("name","type","min","max","default")
+
+				def IsReserved(token:String)=reservedtokens.contains(token)
+
+				while(tokenizer.HasToken)
+				{
+					var currenttoken=tokenizer.Get
+
+					if(!IsReserved(currenttoken))
+					{
+						if((name=="")||(kind=="")) return null
+
+						return this
+					}
+
+					var fieldbuff=List[String]()
+
+					while(tokenizer.HasToken&&(!IsReserved(tokenizer.Poll)))
+					{
+						fieldbuff=fieldbuff:+tokenizer.Get
+					}
+
+					val field=fieldbuff.mkString(" ")
+
+					if(currenttoken=="name") name=field
+					if(currenttoken=="type") kind=field
+					if(currenttoken=="min") minstr=field
+					if(currenttoken=="max") maxstr=field
+					if(currenttoken=="default") defaultstr=field
+				}
+			}
+
+			return this
+		}
+
+		def ReportXML:String=
+		{
+			var td1=""
+			var td2=""
+			var td3=""
+			val id=s"engineoptions#$path#$name"
+			if(kind=="button")
+			{
+				td1=s"""
+					|<button id="$id" text="$name"/>
+				""".stripMargin
+			}
+			if(kind=="check")
+			{
+				td1=s"""
+					|<label text="$name"/>
+				""".stripMargin
+				var value=Builder.getcvevals(id,defaultstr)
+				Builder.setcveval(id,StringData(value))				
+				td2=s"""
+				|<checkbox id="$id" usevariantentry="true"/>
+				""".stripMargin
+			}
+			if(kind=="string")
+			{
+				td1=s"""
+					|<label text="$name"/>
+				""".stripMargin
+				var value=Builder.getcvevals(id,defaultstr)
+				Builder.setcveval(id,StringData(value))				
+				td2=s"""
+				|<textfield id="$id" usevariantentry="true"/>
+				""".stripMargin
+				td3=s"""
+					|<button id="$id!apply" text="Apply"/>
+				""".stripMargin
+			}
+			if(kind=="spin")
+			{				
+				val minv=ParseInt(minstr,0)
+				val maxv=ParseInt(maxstr,100)
+				var span=maxv-minv
+				if(minv==1) span+=1
+				var unit=1
+				if(span>10)
+				{
+					unit=span/10
+				}
+				var value=Builder.getcvevals(id,""+defaultstr.toDouble)
+				Builder.setcveval(id,StringData(value))
+				td1=s"""
+					|<label text="$name"/>
+				""".stripMargin
+				td2=s"""
+				|<slider width="300.0" id="$id" usevariantentry="true" min="$minstr" max="$maxstr" majortickunit="$unit" showticklabels="true"/>
+				""".stripMargin
+			}
+			s"""
+				|<hbox padding="3" gap="3">
+				|$td1
+				|$td2
+				|$td3
+				|</hbox>
+			""".stripMargin
+		}
+	}
+
+	case class Options(var options:List[Option]=List[Option]())
+	{
+		def Add(o:Option)
+		{
+			options=options:+o
+		}
+
+		def ReportXML:String=
+		{
+			val content=(for(option<-options) yield option.ReportXML).mkString("\n")
+			content
+		}
+	}
+
+	def GetNameFromId(id:String):String=
+	{
+		val parts=id.split("#").toList
+		parts.reverse.head
+	}
+
+	def GetPathFromId(id:String):String=
+	{
+		val parts=id.split("#").toList
+		parts.reverse.tail.reverse.mkString("#")
+	}
+
+	def options_handler(ev:MyEvent)
+	{
+		if(ev.kind=="button pressed")
+		{
+			val buttonname=GetNameFromId(ev.id)
+
+			val parts=buttonname.split("!").toList
+
+			if((parts.length==2)&&(parts(1)=="apply"))
+			{				
+				var value=""
+				var truename=parts(0)
+				val truepath=GetPathFromId(ev.id)+"#"+truename
+				val comp=Builder.getcomp(truepath)
+				if(comp!=null)
+				{
+					val guivalue=comp.get_gui_value
+					if(guivalue!=null)
+					{
+						if(guivalue.isInstanceOf[StringData])
+						{
+							value=guivalue.asInstanceOf[StringData].value
+						}
+					}
+				}
+				IssueCommand("setoption name "+truename+" value "+value)
+			} else {
+				IssueCommand("setoption name "+buttonname+" value ")
+			}
+		}
+
+		if(ev.kind=="slider changed")
+		{
+			Builder.setcveval(ev.id,StringData(ev.value))
+
+			val slidername=GetNameFromId(ev.id)
+
+			val sliderint=ev.value.toDouble.toInt
+
+			IssueCommand("setoption name "+slidername+" value "+sliderint)
+		}
+
+		if(ev.kind=="checkbox changed")
+		{
+			Builder.setcveval(ev.id,StringData(ev.value))
+
+			val checkboxname=GetNameFromId(ev.id)
+
+			val checkboxbool=ev.value
+
+			IssueCommand("setoption name "+checkboxname+" value "+checkboxbool)
+		}
+	}
+
+	def BuildOptions
+	{
+		val svboxcomp=Builder.getcomp(s"$path#enginesettingsvbox")
+		if(svboxcomp==null) return
+		val svbox=svboxcomp.node.asInstanceOf[VBox]
+		if(svbox==null) return
+		val optionscontent=options.ReportXML
+		val blob=s"""
+			|<vbox padding="3" gap="3">
+			|$optionscontent
+			|</vbox>
+		""".stripMargin
+		val scenegraph=Builder.build(s"$path#enginesettingsvboxscenegraph",options_handler,blob=blob)
+		svbox.getChildren().clear()
+		svbox.getChildren().add(scenegraph)
+	}
+
+	def ParseStartup(line:String)
+	{
+		val tokenizer=Tokenizer(line)
+
+		if(protocol=="UCI")
+		{
+			val head=tokenizer.Poll
+			if(head=="uciok")
+			{
+				startup=false
+			} else {
+				val option=Option().ParseLine(line)
+				if(option!=null)
+				{					
+					options.Add(option)
+				}
+			}
+		}
 	}
 
 	def ProcessEngineOut(line:String)
 	{
 		log.Add(LogItem(line,"out"))
 
-		thinkingoutput.ParseLine(line)
+		if(startup)
+		{
+			ParseStartup(line)
+		}
+		else
+		{
+			thinkingoutput.ParseLine(line)
+		}
 
 		if(protocol=="UCI")
 		{
@@ -164,9 +425,11 @@ case class GEngine(
 		def ReportHTML:String=
 		{
 			val color=if(kind=="in") "#ff0000" else "#0000ff"
-			val mline=line.replaceAll("\\n","<br>")
+			var rline=line.replaceAll("<","&lt;")
+			rline=rline.replaceAll(">","&gt;")
+			rline=rline.replaceAll("\\n","<br>")
 			s"""
-				|<font color="$color">$mline</font>
+				|<font color="$color">$rline</font>
 			""".stripMargin
 		}
 	}
@@ -263,8 +526,14 @@ case class GEngine(
 		}
 	}})}
 
+	var options=Options()
+
 	def ProtocolStartup
 	{
+		startup=true
+
+		options=Options()
+
 		if(protocol=="UCI")
 		{
 			IssueCommand("uci")
@@ -274,6 +543,14 @@ case class GEngine(
 		{
 			IssueCommand("xboard")
 		}
+
+		var cnt=0
+		while((startup)&&(cnt< 100))
+		{
+			Thread.sleep(100)
+		}
+
+		startup=false
 	}
 
 	def Load:Boolean=
@@ -400,6 +677,10 @@ case class GEngine(
 		val autoloadstatus=if(autoload) "On" else "Off"
 		val consoleopen=Builder.stages.contains(path)
 		val consoletext=if(consoleopen) "Close Console/Settings" else "Open Console/Settings"
+		var consolebuttontext=s"""
+			|<td><input type="button" value="$consoletext" onclick="idstr='$id'; command='console';"></td>
+		""".stripMargin
+		if(engineprocess==null) consolebuttontext="<td>Tip: for Console/Settings press Load</td>"
 		s"""
 			|<div style="background-color: $divbackground; border-width: 2px; border-style: dotted; border-color: #afafaf; border-radius: 10px; margin: 3px;">
 			|<table>
@@ -409,7 +690,7 @@ case class GEngine(
 			|<td class="italiclabel">name</td>
 			|<td style="padding-left: 3px; padding-right: 3px; border-style: dotted; border-radius: 5px; border-color: #7f7fff; font-size: 20px; font-weight: bold; color: #0000ff">$name</td>
 			|<td><input type="button" value="Load" onclick="idstr='$id'; command='load';"></td>
-			|<td><span onmousedown="idstr='$id'; command='autoload';" style="cursor: pointer; border-style: solid; border-width: 1px; border-radius: 5px; font-size: 12px; padding-left: 6px; padding-right: 9px; padding-top: 4px; padding-bottom: 4px; background-color: $autoloadbackground;">Auto Load $autoloadstatus</span></td>
+			|<td><span onmousedown="idstr='$id'; command='autoload';" style="cursor: pointer; border-style: solid; border-width: 1px; border-radius: 5px; font-size: 12px; padding-left: 6px; padding-right: 9px; padding-top: 4px; padding-bottom: 4px; background-color: $autoloadbackground;">Auto Load</span></td>
 			|<td><input type="button" value="Unload" onclick="idstr='$id'; command='unload';"></td>
 			|<td class="italiclabel">status</td>
 			|<td><span style="border-style: solid; border-color: #000000; border-width: 1px; border-radius: 5px; padding-left: 3px; padding-right: 3px; padding-bottom: 2px;">$status</span></td>
@@ -425,7 +706,7 @@ case class GEngine(
 			|<td><input type="button" value="Up" onclick="idstr='$id'; command='up';"></td>
 			|<td><input type="button" value="Down" onclick="idstr='$id'; command='down';"></td>
 			|<td><input type="button" value="To bottom" onclick="idstr='$id'; command='bottom';"></td>
-			|<td><input type="button" value="$consoletext" onclick="idstr='$id'; command='console';"></td>
+			|$consolebuttontext
 			|</tr>
 			|</table>
 			|</td></tr>
@@ -445,9 +726,12 @@ case class GEngine(
 
 	var running=false
 
+	var startup=false
+
 	def Start(g:game)
 	{
 		if(engineprocess==null) return
+		if(startup) return
 		if(running) return
 		thinkingoutput=ThinkingOutput()
 		if(protocol=="UCI")
@@ -464,6 +748,7 @@ case class GEngine(
 	def Stop
 	{
 		if(engineprocess==null) return
+		if(startup) return
 		if(!running) return
 		if(protocol=="UCI")
 		{
@@ -510,6 +795,16 @@ case class GEngine(
 			{
 				val token=tokens.head
 				tokens=tokens.tail
+				return token
+			}
+			return null
+		}
+
+		def Poll:String=
+		{
+			if(tokens.length>0)
+			{
+				val token=tokens.head
 				return token
 			}
 			return null

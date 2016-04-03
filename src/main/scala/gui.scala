@@ -1990,9 +1990,9 @@ class GuiClass extends Application
 
 		println("done")
 
-		println("application stopped ok, will quit in 10 seconds")
+		/*println("application stopped ok, will quit in 10 seconds")
 
-		Thread.sleep(10000)
+		Thread.sleep(10000)*/
 	}
 
 }

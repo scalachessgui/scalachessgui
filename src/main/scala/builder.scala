@@ -932,6 +932,12 @@ object Builder
 				val cval=getcval(id)
 
 				set_gui_value_safe(cval)
+
+				if(properties.contains("usevariantentry"))
+				{
+					val cveval=getcveval(id)
+					set_gui_value_safe(cveval)
+				}
 			}
 
 			/////////////////////////////////////
