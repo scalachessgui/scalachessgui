@@ -74,6 +74,8 @@ case class GEngine(
 
 	def SetMultipv(set_multipv:Int,g:game)
 	{
+		if(engineprocess==null) return
+
 		multipv=set_multipv
 
 		if(protocol=="UCI")
@@ -211,12 +213,13 @@ case class GEngine(
 		var kind:String="",
 		var minstr:String="",
 		var maxstr:String="",
-		var defaultstr:String=""
+		var defaultstr:String="",
+		var send:Boolean=true
 	)
 	{
 		def Apply
 		{
-			if(kind!="button")
+			if((kind!="button")&&(send==true))
 			{
 				val id=s"engineoptions#$pathid#$name"
 
@@ -224,7 +227,10 @@ case class GEngine(
 
 				if((kind=="spin")&&(value!=defaultstr)) value=""+value.toDouble.toInt
 
-				IssueCommand("setoption name "+name+" value "+value)
+				if(protocol=="UCI")
+				{
+					IssueCommand("setoption name "+name+" value "+value)
+				}
 			}
 		}
 
@@ -342,6 +348,16 @@ case class GEngine(
 
 	case class Options(var options:List[Option]=List[Option]())
 	{
+
+		InitOptions
+
+		def InitOptions
+		{
+			Add(Option(name="Auto set FEN",kind="check",defaultstr="true",send=false))
+			Add(Option(name="Command after set FEN",kind="string",defaultstr="",send=false))
+			Add(Option(name="Auto start",kind="check",defaultstr="true",send=false))
+		}
+
 		def Add(o:Option)
 		{
 			options=options:+o
@@ -397,9 +413,23 @@ case class GEngine(
 						}
 					}
 				}
-				IssueCommand("setoption name "+truename+" value "+value)
+				if(protocol=="UCI")
+				{
+					IssueCommand("setoption name "+truename+" value "+value)
+				}
+				if(protocol=="XBOARD")
+				{
+					
+				}
 			} else {
-				IssueCommand("setoption name "+buttonname+" value ")
+				if(protocol=="UCI")
+				{
+					IssueCommand("setoption name "+buttonname+" value ")
+				}
+				if(protocol=="XBOARD")
+				{
+					IssueCommand("option "+buttonname)
+				}
 			}
 		}
 
@@ -411,7 +441,14 @@ case class GEngine(
 
 			val sliderint=ev.value.toDouble.toInt
 
-			IssueCommand("setoption name "+slidername+" value "+sliderint)
+			if(protocol=="UCI")
+			{
+				IssueCommand("setoption name "+slidername+" value "+sliderint)
+			}
+			if(protocol=="XBOARD")
+			{
+				
+			}
 		}
 
 		if(ev.kind=="checkbox changed")
@@ -422,7 +459,14 @@ case class GEngine(
 
 			val checkboxbool=ev.value
 
-			IssueCommand("setoption name "+checkboxname+" value "+checkboxbool)
+			if(protocol=="UCI")
+			{
+				IssueCommand("setoption name "+checkboxname+" value "+checkboxbool)
+			}
+			if(protocol=="XBOARD")
+			{
+				
+			}
 		}
 	}
 
@@ -443,6 +487,109 @@ case class GEngine(
 		svbox.getChildren().add(scenegraph)
 	}
 
+	case class Features(
+		var setboard:Boolean=false,
+		var analyze:Boolean=true,
+		var done:Boolean=false,
+		var myname:String=""
+	)
+	{
+		def ParseLine(line:String)
+		{
+			val tokenizer=Tokenizer(line)
+			val head=tokenizer.Get
+			if(head==null) return
+			if(head!="feature") return
+			while(tokenizer.HasToken)
+			{
+				val token=tokenizer.Get
+				val parts=token.split("=").toList
+				if(parts.length==2)
+				{
+					val feature=parts(0)
+					var value=parts(1)
+
+					if(value.length>0)
+					{
+						var needjoin=false
+						var joinparts=List[String]()
+						if(value(0)=='"')
+						{
+							if(value.length>1)
+							{
+								if(value(value.length-1)=='"')
+								{
+									value=value.substring(1,value.length-1)
+								} else {
+									joinparts=List[String](value.substring(1))
+									needjoin=true
+								}
+							} else {
+								joinparts=List[String]("")
+								needjoin=true
+							}
+							var closed=false
+							if(needjoin)
+							{
+								while(tokenizer.HasToken&&(!closed))
+								{
+									var part=tokenizer.Get
+									if(part.length>0)
+									{
+										if(part(part.length-1)=='"')
+										{
+											part=part.substring(0,part.length-1)
+											closed=true
+										}
+									}
+									joinparts=joinparts:+part
+								}
+								value=joinparts.mkString(" ")
+							}
+						}
+					}
+
+					if(feature=="myname") myname=value
+					if((feature=="setboard")&&(value=="1")) setboard=true
+					if((feature=="analyze")&&(value=="0")) analyze=false
+					if((feature=="done")&&(value=="1")) done=true
+
+					if(feature=="option")
+					{
+						val vtokenizer=Tokenizer(value)
+						var nameparts=List[String]()
+						var nameend=false
+						while(vtokenizer.HasToken&&(!nameend))
+						{
+							val token=vtokenizer.Poll
+							if(token.length>0)
+							{
+								if(token(0)=='-')
+								{
+									nameend=true
+								} else {
+									vtokenizer.Get
+									nameparts=nameparts:+token
+								}
+							}
+						}
+						var kind=vtokenizer.Get
+						if(kind!=null)
+						{
+							if(kind.length>0)
+							{
+								val name=nameparts.mkString(" ")
+								kind=kind.substring(1)
+								val option=Option(kind=kind,name=name)
+								options.Add(option)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	def ParseStartup(line:String)
 	{
 		val tokenizer=Tokenizer(line)
@@ -460,6 +607,16 @@ case class GEngine(
 				{					
 					options.Add(option)					
 				}
+			}
+		}
+
+		if(protocol=="XBOARD")
+		{
+			features.ParseLine(line)
+			if(features.done)
+			{
+				startup=false
+				options.ApplyAll
 			}
 		}
 	}
@@ -505,7 +662,7 @@ case class GEngine(
 		cwe.loadContent(content)
 	}
 
-	case class Log(buffersize:Int=200)
+	case class Log(buffersize:Int=1000)
 	{
 		var Items=List[LogItem]()
 
@@ -551,6 +708,7 @@ case class GEngine(
 			case e: Throwable =>
 			{
 				println(s"engine write IO exception, command: $command, id: $id, pathid: $pathid")
+				e.printStackTrace
 			}
 		}
 	}
@@ -591,12 +749,14 @@ case class GEngine(
 	}})}
 
 	var options=Options()
+	var features=Features()
 
 	def ProtocolStartup
 	{
 		startup=true
 
 		options=Options()
+		features=Features()
 
 		if(protocol=="UCI")
 		{
@@ -605,7 +765,10 @@ case class GEngine(
 
 		if(protocol=="XBOARD")
 		{
+			startup=false
 			IssueCommand("xboard")
+			IssueCommand("protover 2")
+			startup=true
 		}
 
 		var cnt=0
@@ -823,6 +986,24 @@ case class GEngine(
 
 	def IsAtomkraft:Boolean=(ParseEngineNameFromPath(path)=="atomkraft")
 
+	def GetOption(name:String,default:String=""):String=
+	{
+		val id=s"engineoptions#$pathid#$name"
+
+		var value=Builder.getcvevals(id,default)
+
+		value
+	}
+
+	def GetBoolOption(name:String,default:Boolean):Boolean=
+	{
+		val boolstr=GetOption(name,""+default)
+
+		if(boolstr=="true") return true
+
+		false
+	}
+
 	def Start(g:game)
 	{
 		if(engineprocess==null) return
@@ -830,24 +1011,50 @@ case class GEngine(
 		if(running) return
 		thinkingoutput=ThinkingOutput()
 		OpenConsole
+		val autosetfen=GetBoolOption("Auto set FEN",true)
+		val commandaftersetfen=GetOption("Command after set FEN","")
+		val autostart=GetBoolOption("Auto start",true)
+		def IssueCommandAfterSetFEN
+		{
+			if(commandaftersetfen!="") IssueCommand(commandaftersetfen)
+		}
 		if(protocol=="UCI")
 		{
 			val fen=g.report_fen
 			if(IsAtomkraft)
 			{
-				val content = new ClipboardContent()
-                content.putString(fen)
-                clip.setContent(content)
+				if(autosetfen)
+				{
+					val content = new ClipboardContent()
+	                content.putString(fen)
+	                clip.setContent(content)
+            	}
+
+            	IssueCommandAfterSetFEN
                 
-                IssueCommand("1\n4")
+                if(autostart)
+                {
+                	IssueCommand("1\n4")
+
+                	running=true
+            	}
 			}
 			else
 			{
-				IssueCommand("position fen "+fen)
-				IssueCommand("go infinite")
+				if(autosetfen)
+				{
+					IssueCommand("position fen "+fen)
+				}
+
+				IssueCommandAfterSetFEN
+
+				if(autostart)
+				{
+					IssueCommand("go infinite")
+
+					running=true
+				}
 			}
-			
-			running=true
 		}
 	}
 
@@ -878,7 +1085,7 @@ case class GEngine(
 	def CheckRestart(g:game)
 	{
 		if(engineprocess==null) return
-		if(running)
+		if(running||(!GetBoolOption("Auto start",true)))
 		{
 			Stop
 			Start(g)
