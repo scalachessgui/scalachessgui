@@ -25,6 +25,8 @@ import builder._
 import settings._
 import game._
 
+import collection.JavaConverters._
+
 ////////////////////////////////////////////////////////////////////
 
 case class GEngine(
@@ -34,6 +36,8 @@ case class GEngine(
 )
 {
 	var path:String=""
+	var pathid:String=""
+	var commandline:String=""
 	var protocol:String="UCI"
 
 	val protocols=List("UCI","XBOARD")
@@ -50,6 +54,23 @@ case class GEngine(
 	FromData(enginedata)
 
 	var multipv=1
+
+	def Loaded:Boolean=(engineprocess!=null)
+
+	def SetPath(p:String)
+	{
+		path=p
+		CreatePathId
+	}
+
+	def SetCommandLine(cv:String)
+	{
+		val wasloaded=Loaded
+		Unload
+		commandline=cv
+		CreatePathId
+		if(wasloaded) Load
+	}
 
 	def SetMultipv(set_multipv:Int,g:game)
 	{
@@ -75,7 +96,7 @@ case class GEngine(
 
 		if(ev.kind=="button pressed")
 		{
-			if(ev.id==s"$path#issueenginecommand")
+			if(ev.id==s"$pathid#issueenginecommand")
 			{
 				IssueConsoleEngineCommand
 			}
@@ -83,7 +104,7 @@ case class GEngine(
 
 		if(ev.kind=="textfield entered")
 		{
-			if(ev.id==s"$path#enginecommand")
+			if(ev.id==s"$pathid#enginecommand")
 			{
 				IssueConsoleEngineCommand
 			}
@@ -92,7 +113,7 @@ case class GEngine(
 
 	def IssueConsoleEngineCommand
 	{
-		val etext=Builder.gettext(s"$path#enginecommand")
+		val etext=Builder.gettext(s"$pathid#enginecommand")
 		val command=etext.getText
 		etext.setText("")
 		IssueCommand(command)
@@ -100,9 +121,9 @@ case class GEngine(
 
 	def CloseConsole
 	{
-		if(Builder.stages.contains(path))
+		if(Builder.stages.contains(pathid))
 		{
-			Builder.closeStage(path)
+			Builder.closeStage(pathid)
 		}
 	}
 
@@ -114,9 +135,9 @@ case class GEngine(
 			return
 		}
 
-		if(Builder.stages.contains(path))
+		if(Builder.stages.contains(pathid))
 		{
-			Builder.stages(path).ToTop
+			Builder.stages(pathid).ToTop
 			return
 		}	
 
@@ -125,29 +146,29 @@ case class GEngine(
 			|<tabpane>
 			|<tab caption="Search output">
 			|<scrollpane id="engineoutscrollpane" width="800">
-			|<webview id="$path#engineouttext" height="3000" width="3000"/>
+			|<webview id="$pathid#engineouttext" height="3000" width="3000"/>
 			|</scrollpane>
 			|</tab>
 			|<tab caption="Console">
 			|<vbox padding="5" gap="5">
 			|<hbox padding="5" gap="5">
-			|<textfield style="-fx-font-size: 18px; -fx-text-fill: #00007f;" id="$path#enginecommand"/>
-			|<button id="$path#issueenginecommand" text="Issue" style="round"/>
+			|<textfield style="-fx-font-size: 18px; -fx-text-fill: #00007f;" id="$pathid#enginecommand"/>
+			|<button id="$pathid#issueenginecommand" text="Issue" style="round"/>
 			|</hbox>
 			|<scrollpane id="engineconsolescrollpane" width="800">
-			|<webview id="$path#engineconsoletext" height="3000" width="3000"/>
+			|<webview id="$pathid#engineconsoletext" height="3000" width="3000"/>
 			|</scrollpane>
 			|</vbox>
 			|</tab>
 			|<tab caption="Settings">
 			|<scrollpane id="enginesettingsscrollpane" width="800">
-			|<vbox id="$path#enginesettingsvbox" height="3000" width="3000"/>
+			|<vbox id="$pathid#enginesettingsvbox" height="3000" width="3000"/>
 			|</scrollpane>
 			|</tab>
 			|</tabpane>
 			|</scrollpane>
 		""".stripMargin
-		Builder.MyStage(path,modal=false,set_handler=handler,title=ParseEngineNameFromPath(path)+" console",blob=blob)
+		Builder.MyStage(pathid,modal=false,set_handler=handler,title=ParseEngineNameFromPath(path)+" console",blob=blob)
 		BuildOptions
 		log.Update
 	}
@@ -159,7 +180,7 @@ case class GEngine(
 			CloseConsole
 			return
 		}
-		if(Builder.stages.contains(path))
+		if(Builder.stages.contains(pathid))
 		{
 			CloseConsole
 		} else {
@@ -182,7 +203,7 @@ case class GEngine(
 		enginein=null
 		engineout=null
 		CloseConsole
-		println(s"engine $path unloaded")
+		println(s"engine $pathid unloaded")
 	}
 
 	case class Option(
@@ -197,7 +218,7 @@ case class GEngine(
 		{
 			if(kind!="button")
 			{
-				val id=s"engineoptions#$path#$name"
+				val id=s"engineoptions#$pathid#$name"
 
 				var value=Builder.getcvevals(id,defaultstr)
 
@@ -257,7 +278,7 @@ case class GEngine(
 			var td1=""
 			var td2=""
 			var td3=""
-			val id=s"engineoptions#$path#$name"
+			val id=s"engineoptions#$pathid#$name"
 			if(kind=="button")
 			{
 				td1=s"""
@@ -407,7 +428,7 @@ case class GEngine(
 
 	def BuildOptions
 	{
-		val svboxcomp=Builder.getcomp(s"$path#enginesettingsvbox")
+		val svboxcomp=Builder.getcomp(s"$pathid#enginesettingsvbox")
 		if(svboxcomp==null) return
 		val svbox=svboxcomp.node.asInstanceOf[VBox]
 		if(svbox==null) return
@@ -417,7 +438,7 @@ case class GEngine(
 			|$optionscontent
 			|</vbox>
 		""".stripMargin
-		val scenegraph=Builder.build(s"$path#enginesettingsvboxscenegraph",options_handler,blob=blob)
+		val scenegraph=Builder.build(s"$pathid#enginesettingsvboxscenegraph",options_handler,blob=blob)
 		svbox.getChildren().clear()
 		svbox.getChildren().add(scenegraph)
 	}
@@ -479,7 +500,7 @@ case class GEngine(
 
 	def UpdateConsoleLog(content:String)
 	{
-		val cwe=Builder.getwebe(s"$path#engineconsoletext")
+		val cwe=Builder.getwebe(s"$pathid#engineconsoletext")
 		if(cwe==null) return
 		cwe.loadContent(content)
 	}
@@ -529,7 +550,7 @@ case class GEngine(
 		{
 			case e: Throwable =>
 			{
-				println(s"engine write IO exception, command: $command, id: $id, path: $path")
+				println(s"engine write IO exception, command: $command, id: $id, pathid: $pathid")
 			}
 		}
 	}
@@ -555,7 +576,7 @@ case class GEngine(
 				{
 					case e: Throwable => 
 					{
-						println(s"engine read not a char exception, chunk: $chunkobj, id: $id, path: $path")
+						println(s"engine read not a char exception, chunk: $chunkobj, id: $id, pathid: $pathid")
 					}
 				}
 			}
@@ -563,7 +584,7 @@ case class GEngine(
 			{
 				case e: Throwable =>
 				{
-					println(s"engine read IO exception, id: $id, path: $path")
+					println(s"engine read IO exception, id: $id, pathid: $pathid")
 				}
 			}
 		}
@@ -588,7 +609,7 @@ case class GEngine(
 		}
 
 		var cnt=0
-		while((startup)&&(cnt< 50))
+		while((startup)&&(cnt< 20))
 		{
 			Thread.sleep(100)
 			cnt+=1
@@ -600,7 +621,8 @@ case class GEngine(
 	def Load:Boolean=
 	{
 		Unload
-		val processbuilder=new ProcessBuilder(path)
+		val progandargs:List[String]=path+:commandline.split(" ").toList
+		val processbuilder=new ProcessBuilder(progandargs.asJava)
 		val epf=new File(path)
 		if(epf.exists())
 		{
@@ -626,7 +648,7 @@ case class GEngine(
         enginereadthread=CreateEngineReadThread
         enginereadthread.start()
         ProtocolStartup
-        println(s"engine $path loaded")
+        println(s"engine $pathid loaded")
 		return true
 	}
 
@@ -690,7 +712,24 @@ case class GEngine(
 					}
 				}
 			}
+
+			val commandlinedata=Data.get(enginemapdata,"commandline")
+
+			if(commandlinedata != null)
+			{
+				if(commandlinedata.isInstanceOf[StringData])
+				{
+					commandline=commandlinedata.asInstanceOf[StringData].value					
+				}
+			}
+
+			CreatePathId
 		}
+	}
+
+	def CreatePathId
+	{
+		pathid=path+" "+commandline
 	}
 
 	def ToData:Data=
@@ -699,6 +738,7 @@ case class GEngine(
 		mapdata+=("path" -> StringData(path))
 		mapdata+=("protocol" -> StringData(protocol))
 		mapdata+=("autoload" -> StringData(""+autoload))
+		mapdata+=("commandline" -> StringData(commandline))
 		MapData(mapdata)
 	}
 
@@ -719,7 +759,7 @@ case class GEngine(
 		val autoloadbackground=if(autoload) "#ffffaf" else "#ffffff"
 		val divbackground=if(engineprocess!=null) "#afffaf" else "#ffafaf"
 		val autoloadstatus=if(autoload) "On" else "Off"
-		val consoleopen=Builder.stages.contains(path)
+		val consoleopen=Builder.stages.contains(pathid)
 		val consoletext=if(consoleopen) "Close Console/Settings" else "Open Console/Settings"
 		var consolebuttontext=s"""
 			|<td><input type="button" value="$consoletext" onclick="idstr='$id'; command='console';"></td>
@@ -760,6 +800,13 @@ case class GEngine(
 			|<td><input type="button" value="..." onclick="idstr='$id'; command='editpath';"></td>
 			|<td class="italiclabel">path</td><td><font color='blue'>$path</font></td>
 			|<td><input type="button" value="Delete Engine" onclick="idstr='$id'; command='del';"></td>
+			|</tr>
+			|</table>
+			|<table>
+			|<tr>
+			|<td class="italiclabel">command line</td>
+			|<td><input type="text" id="commandline$id" value="$commandline"></td>
+			|<td><input type="button" value="Apply command line" onclick="idstr='$id'; command='applycommandline';"></td>
 			|</tr>
 			|</table>
 			|</td></tr>
@@ -1114,7 +1161,7 @@ case class GEngine(
 
 		def UpdateEngineOut(content:String)
 		{
-			val cwe=Builder.getwebe(s"$path#engineouttext")
+			val cwe=Builder.getwebe(s"$pathid#engineouttext")
 			if(cwe==null) return
 			cwe.loadContent(content)
 		}
@@ -1198,13 +1245,15 @@ case class GEngineList(var we:WebEngine=null)
 
 			val path=f.getPath()
 
-			enginelist(id).path=path
+			enginelist(id).SetPath(path)
 
 		}
 	}
 
 	def Del(id:Int)
 	{
+		val engine=enginelist(id)
+		engine.Unload
 		var i= -1
 		var j= -1
 		enginelist=for(engine <- enginelist; if({ i+=1; i != id })) yield { j+=1; engine.SetId(j) }
@@ -1231,6 +1280,13 @@ case class GEngineList(var we:WebEngine=null)
 		val command=we.executeScript("command").toString()
 		val idstr=we.executeScript("idstr").toString()
 		val param=we.executeScript("param").toString()
+
+		if(command=="applycommandline")
+		{
+			val cv=we.executeScript(s"document.getElementById('commandline$idstr').value").toString()
+			enginelist(idstr.toInt).SetCommandLine(cv)
+			Update
+		}
 
 		if(command=="console")
 		{
