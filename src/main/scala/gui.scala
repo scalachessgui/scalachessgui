@@ -48,12 +48,30 @@ import gui2.Robot
 class GuiClass extends Application
 {
 
-	val scrollpanes=List("colorpgn","pgn","pgntree","move","engine","engines")
+	val scrollpanes=List("colorpgn","pgn","pgntree","move","engine","engines","enginegames")
 
 	var enginelist:GEngineList=null
 
+	var enginegames=EngineGames(DisableBoardControls,EnableBoardControls)
+
 	def getpanewidth=Builder.gsd("panewidth",750.0)
 	def getinnerpanewidth=getpanewidth-30.0
+
+	var boardcontrolsdisabled=false
+
+	def DisableBoardControls()
+	{
+		boardcontrolsdisabled=true
+		if(gb==null) return
+		gb.DisableControls
+	}
+
+	def EnableBoardControls()
+	{
+		boardcontrolsdisabled=false
+		if(gb==null) return
+		gb.EnableControls
+	}
 
 	def eval_exp(exp:String):String=
 	{
@@ -631,6 +649,22 @@ class GuiClass extends Application
 				Builder.MyStage("engineconsole",modal=false,set_handler=handler,do_size=false,title="Engine console")
 			}
 
+			if(ev.id=="startenginegame")
+			{
+				enginegames.StartGame
+				selecttab("Engine games")
+			}
+
+			if(ev.id=="abortenginegame")
+			{
+				enginegames.AbortGame
+			}
+
+			if(ev.id=="enginegamestimecontrol")
+			{
+				Builder.MyStage("enginegamestimecontrol",modal=true,do_size=false,set_handler=handler,title="Engine games - time control")
+			}
+
 			if(ev.id=="recordrect")
 			{
 				Builder.MyStage("recordrectdialog",modal=true,set_handler=handler,title="Record rect")
@@ -849,16 +883,19 @@ class GuiClass extends Application
 
 			if(ev.id=="boardcontrolpanelstart")
 			{
+				if(boardcontrolsdisabled) return
 				engine_start
 			}
 
 			if(ev.id=="boardcontrolpanelstop")
 			{
+				if(boardcontrolsdisabled) return
 				engine_stop
 			}
 
 			if(ev.id=="boardcontrolpanelmake")
 			{
+				if(boardcontrolsdisabled) return
 				engine_make
 			}
 
@@ -953,6 +990,8 @@ class GuiClass extends Application
 
 			if(ev.id=="boardcontrolpanelreset")
 			{
+				if(boardcontrolsdisabled) return
+
 				commands.exec("r")
 
 				update
@@ -960,6 +999,8 @@ class GuiClass extends Application
 
 			if(ev.id=="boardcontrolpaneldel")
 			{
+				if(boardcontrolsdisabled) return
+
 				commands.exec("d")
 
 				update
@@ -1380,8 +1421,7 @@ class GuiClass extends Application
 						{
 							value=""+data.Utils.parse[Double](value,0.0).toInt
 						}
-						val command=s"setoption name $name value $value"
-						println("engine command "+command)
+						val command=s"setoption name $name value $value"						
 						engine.issue_command(command+"\n")
 					}
 					widgets+=s"""
@@ -1791,6 +1831,9 @@ class GuiClass extends Application
 			Builder.getcomp("enginestext").node.asInstanceOf[WebView].setMinHeight(paneheight)
 			Builder.getcomp("enginestext").node.asInstanceOf[WebView].setMaxHeight(paneheight)
 
+			Builder.getcomp("enginegamestext").node.asInstanceOf[WebView].setMinHeight(paneheight)
+			Builder.getcomp("enginegamestext").node.asInstanceOf[WebView].setMaxHeight(paneheight)
+
 			val GAMES_STEP=((paneheight-70)/18).toInt
 
 			for(gamebrowser<-List(pgn_game_browser,book_game_browser))
@@ -1979,6 +2022,12 @@ class GuiClass extends Application
 		print("shutting down builder ... ")
 
 		Builder.shutdown
+
+		println("done")
+
+		print("shutting down engine games ... ")
+
+		enginegames.ShutDown
 
 		println("done")
 

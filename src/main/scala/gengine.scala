@@ -29,6 +29,61 @@ import collection.JavaConverters._
 
 ////////////////////////////////////////////////////////////////////
 
+case class EngineGames(
+	DisableBoardControls:()=>Unit,
+	EnableBoardControls:()=>Unit
+)
+{
+	var gamerunning=false
+
+	var gamethread:Thread=null
+
+	def Update(content:String)
+	{
+		Platform.runLater(new Runnable{def run{
+			val we=Builder.getwebe(s"enginegamestext")
+			if(we==null) return
+			we.loadContent(content)
+		}})
+	}
+
+	def StartGame
+	{
+		if(gamerunning) return
+		gamethread=new Thread(new Runnable{def run{
+			gamerunning=true
+			var cnt=0
+			var interrupted=false
+			DisableBoardControls()
+			while((!Thread.currentThread.isInterrupted())&&(!interrupted))
+			{
+				Update("game running "+cnt)
+				try{Thread.sleep(1000)}catch{case e:Throwable=>{interrupted=true}}
+				cnt+=1
+			}
+			Update("game aborted "+cnt)
+			EnableBoardControls()
+			gamerunning=false
+		}})
+
+		gamethread.start()
+	}
+
+	def AbortGame
+	{
+		if(gamethread==null) return
+		if(gamerunning)
+		{
+			gamethread.interrupt()
+		}
+	}
+
+	def ShutDown
+	{
+		AbortGame
+	}
+}
+
 case class GEngine(
 	var id:Int=0,
 	val enginedata:Data=null,

@@ -56,6 +56,11 @@ class guiboard(
 
 	val material=Builder.gss("material#selected","wood")
 
+	var controlsdisabled=false
+
+	def DisableControls {controlsdisabled=true}
+	def EnableControls {controlsdisabled=false}
+
 	rooth.setBackground(new Background(new BackgroundImage(
 			new Image(Resource.asStream(s"images/$material.jpg")),
 			BackgroundRepeat.REPEAT,BackgroundRepeat.REPEAT,BackgroundPosition.CENTER,BackgroundSize.DEFAULT
@@ -181,6 +186,8 @@ class guiboard(
 			var x:Int=mouseEvent.getX().toInt
             var y:Int=mouseEvent.getY().toInt
             var etype:String=mouseEvent.getEventType().toString()
+
+            if(controlsdisabled) return
 
             //println("x "+x+" y "+y+" e "+etype)
 

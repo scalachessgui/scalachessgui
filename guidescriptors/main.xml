@@ -15,6 +15,11 @@
 				<menuitem id="enginesettings" text="Settings"></menuitem>
 				<menuitem id="engineconsole" text="Open console"></menuitem>
 			</menu>
+			<menu text="Engine games">
+				<menuitem id="enginegamestimecontrol" text="Time control"></menuitem>
+				<menuitem id="startenginegame" text="Start game"></menuitem>
+				<menuitem id="abortenginegame" text="Abort game"></menuitem>
+			</menu>
 			<menu text="PGN">
 				<menuitem id="openpgn" text="Open"></menuitem>
 				<menuitem id="savepgnas" text="Save as"></menuitem>
@@ -129,6 +134,14 @@
 					<vbox padding="5" gap="5">
 						<scrollpane id="enginesscrollpane" width="$panewidth">
 							<webview id="enginestext" height="400.0" width="$innerpanewidth"/>
+						</scrollpane>
+					</vbox>
+				</tab>
+				
+				<tab caption="Engine games">
+					<vbox padding="5" gap="5">
+						<scrollpane id="enginegamesscrollpane" width="$panewidth">
+							<webview id="enginegamestext" height="400.0" width="$innerpanewidth"/>
 						</scrollpane>
 					</vbox>
 				</tab>

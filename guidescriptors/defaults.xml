@@ -86,5 +86,45 @@
 			<v key="selected">3</v>
 		</m>
 	</m>
+	
+	<m p="components#timecontrolnumberofmoves">
+		<m>
+			<l key="items">
+				<v>1</v>
+				<v>2</v>
+				<v>3</v>
+				<v>4</v>
+				<v>5</v>
+				<v>10</v>
+				<v>20</v>
+				<v>30</v>
+				<v>40</v>
+				<v>50</v>
+				<v>75</v>
+				<v>100</v>
+			</l>
+			<v key="selected">40</v>
+		</m>
+	</m>
+	
+	<m p="components#timecontroltime">
+		<m>
+			<l key="items">
+				<v>1</v>
+				<v>2</v>
+				<v>3</v>
+				<v>4</v>
+				<v>5</v>
+				<v>10</v>
+				<v>20</v>
+				<v>30</v>
+				<v>40</v>
+				<v>50</v>
+				<v>75</v>
+				<v>100</v>
+			</l>
+			<v key="selected">5</v>
+		</m>
+	</m>
 
 </patches>
