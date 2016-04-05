@@ -24,14 +24,20 @@ import data._
 import builder._
 import settings._
 import game._
+import commands._
+import move._
 
 import collection.JavaConverters._
+
+import org.apache.commons.lang.time.DurationFormatUtils.formatDuration
 
 ////////////////////////////////////////////////////////////////////
 
 case class EngineGames(
 	DisableBoardControls:()=>Unit,
-	EnableBoardControls:()=>Unit
+	EnableBoardControls:()=>Unit,
+	GetEngineList:()=>GEngineList,
+	GuiUpdate:()=>Unit
 )
 {
 	var gamerunning=false
@@ -47,21 +53,166 @@ case class EngineGames(
 		}})
 	}
 
+	var playerwhite:GEngine=null
+	var playerblack:GEngine=null
+
+	var selectplayersmessage=""
+	def SelectPlayers:Boolean=
+	{
+		playerwhite=null
+		playerblack=null
+		for(engine<-GetEngineList().enginelist)
+		{
+			if(engine.Loaded)
+			{
+				if(playerwhite==null) playerwhite=engine
+				else if(playerblack==null) playerblack=engine
+				else return true
+			}
+		}
+		if((playerwhite!=null)&&(playerblack!=null)) return true
+		selectplayersmessage="Game could not be started. Please load at least two engines."
+		return false
+	}
+
+	var initialtime=300000
+	var movestogoperround=40
+	var incrementpermove=0
+	var incrementpermovestogo=300000
+	var timecontrolverbal=""
+	var movestogo=40
+	var turn="white"
+	var players=Map[String,GEngine]()
+
+	def GetTimeControl
+	{
+		initialtime=Builder.gi("components#timecontroltime#selected",5)*60*1000
+		movestogoperround=Builder.gi("components#timecontrolnumberofmoves#selected",40)
+		incrementpermove=0
+		incrementpermovestogo=initialtime
+		movestogo=movestogoperround
+
+		playerwhite.time=initialtime
+		playerblack.time=initialtime
+
+		turn="white"
+
+		players+=("white"->playerwhite)
+		players+=("black"->playerblack)
+
+		val ipmtgs=incrementpermovestogo/1000
+
+		timecontrolverbal=s"$movestogoperround moves in $ipmtgs seconds"
+	}
+
+	var timestep=100
+
+	def StartThinking(engine:GEngine)
+	{
+		engine.wtime=playerwhite.time
+		engine.btime=playerblack.time
+		engine.winc=incrementpermove
+		engine.binc=incrementpermove
+		engine.fen=commands.g.report_fen
+		engine.StartThinking
+	}
+
+	def UpdateGameStatus:String=
+	{
+		val wtime=formatDuration(playerwhite.time,"HH:mm:ss")
+		val btime=formatDuration(playerblack.time,"HH:mm:ss")
+		val timestyle="font-size:36px; font-family: monospace; font-weight: bold; padding: 3px; border-style: solid; border-width: 2px; border-color: #000000; border-radius: 10px;"
+		var whitebckg=if(turn=="white") "#afffaf" else "#afafaf"
+		var blackbckg=if(turn=="black") "#afffaf" else "#afafaf"
+		val sidespan=s"""<span style="padding: 5px; border-style: solid; border-width: 2px; border-color: #000000; border-radius: 10px; font-size: 20px;">"""
+		val namew=playerwhite.GetDisplayName
+		val nameb=playerblack.GetDisplayName
+		val namestyle="font-size: 20px; color: #0000ff;"
+		s"""
+			|<table cellpadding="3" cellspacing="3">
+			|<tr>
+			|<td>$sidespan White </span></td>
+			|<td><span style="$timestyle background-color: $whitebckg;">$wtime</span></td>
+			|<td>$sidespan Black </span></td>
+			|<td><span style="$timestyle background-color: $blackbckg">$btime</span></td>
+			|<td>Moves to go</td>
+			|<td>$movestogo</td>
+			|</tr>
+			|<tr>
+			|<td>White</td>
+			|<td style="$namestyle" colspan="3">$namew</td>
+			|</tr>
+			|<tr>
+			|<td>Black</td>
+			|<td style="$namestyle" colspan="3">$nameb</td>
+			|</tr>
+			|<tr>
+			|<td>Time control</td>
+			|<td style="color: #af0000; font-size: 18px; font-weight: bold;" colspan="3"><i>$timecontrolverbal</i></td>
+			|</tr>
+			|</table>
+		""".stripMargin
+	}
+
 	def StartGame
 	{
 		if(gamerunning) return
+		if(!SelectPlayers)
+		{
+			Update(selectplayersmessage)
+			return
+		}
 		gamethread=new Thread(new Runnable{def run{
 			gamerunning=true
 			var cnt=0
 			var interrupted=false
 			DisableBoardControls()
+			GetTimeControl
+			Platform.runLater(new Runnable{def run{
+				playerwhite.OpenConsole
+				playerblack.OpenConsole
+			}})
+			val initturn=turn
+			var onturn=players(turn)
+			StartThinking(onturn)
+			var stepcnt=0
 			while((!Thread.currentThread.isInterrupted())&&(!interrupted))
 			{
-				Update("game running "+cnt)
-				try{Thread.sleep(1000)}catch{case e:Throwable=>{interrupted=true}}
-				cnt+=1
+				if((stepcnt%5)==0)
+				{
+					Update(UpdateGameStatus)
+				}
+				if(onturn.thinking)
+				{
+					onturn.time-=timestep
+				}
+				else
+				{
+					val m=move(fromalgeb=onturn.bestmove)
+					commands.g.makeMove(m)
+					Platform.runLater(new Runnable{def run{
+						GuiUpdate()
+					}})
+					if(turn=="white") turn="black" else turn="white"
+					onturn=players(turn)
+					StartThinking(onturn)
+					if(turn==initturn)
+					{
+						movestogo-=1
+					}
+					if(movestogo==0)
+					{
+						movestogo=movestogoperround
+						playerwhite.time+=incrementpermovestogo
+						playerblack.time+=incrementpermovestogo
+					}
+				}
+				try{Thread.sleep(timestep)}catch{case e:Throwable=>{interrupted=true}}
+				stepcnt+=1
 			}
-			Update("game aborted "+cnt)
+			playerwhite.Stop
+			playerblack.Stop
+			Update(UpdateGameStatus+"<br>Game aborted.")
 			EnableBoardControls()
 			gamerunning=false
 		}})
@@ -110,7 +261,36 @@ case class GEngine(
 
 	var multipv=1
 
+	var time=300000
+
+	var wtime=300000
+
+	var btime=300000
+
+	var winc=0
+
+	var binc=0
+
+	var movestogo=40
+
+	var thinking=false
+
+	var fen=""
+
 	def Loaded:Boolean=(engineprocess!=null)
+
+	def StartThinking
+	{
+		thinkingoutput=ThinkingOutput()
+
+		if(protocol=="UCI")
+		{
+			IssueCommand(s"position fen $fen")
+			IssueCommand(s"go wtime $wtime btime $btime winc $winc binc $binc movestogo $movestogo")
+		}
+
+		thinking=true
+	}
 
 	def SetPath(p:String)
 	{
@@ -703,6 +883,8 @@ case class GEngine(
 		}
 	}
 
+	var bestmove:String=null
+
 	def ProcessEngineOut(line:String)
 	{
 		log.Add(LogItem(line,"out"))
@@ -718,8 +900,14 @@ case class GEngine(
 
 		if(protocol=="UCI")
 		{
-			val token=Tokenizer(line).Get
-			if(token=="bestmove") bestmovereceived=true
+			var tokenizer=Tokenizer(line)
+			val token=tokenizer.Get
+			if(token=="bestmove")
+			{
+				bestmovereceived=true
+				bestmove=tokenizer.Get
+				thinking=false
+			}
 		}
 	}
 

@@ -52,12 +52,24 @@ class GuiClass extends Application
 
 	var enginelist:GEngineList=null
 
-	var enginegames=EngineGames(DisableBoardControls,EnableBoardControls)
+	var enginegames=EngineGames(DisableBoardControls,EnableBoardControls,GetEngineList,GuiUpdate)
 
 	def getpanewidth=Builder.gsd("panewidth",750.0)
 	def getinnerpanewidth=getpanewidth-30.0
 
 	var boardcontrolsdisabled=false
+
+	def GuiUpdate()
+	{
+		update
+	}
+
+	def ResetGame
+	{
+		commands.exec("r")
+
+		update
+	}
 
 	def DisableBoardControls()
 	{
@@ -71,6 +83,11 @@ class GuiClass extends Application
 		boardcontrolsdisabled=false
 		if(gb==null) return
 		gb.EnableControls
+	}
+
+	def GetEngineList():GEngineList=
+	{
+		return enginelist
 	}
 
 	def eval_exp(exp:String):String=
@@ -651,8 +668,12 @@ class GuiClass extends Application
 
 			if(ev.id=="startenginegame")
 			{
-				enginegames.StartGame
-				selecttab("Engine games")
+				if(!enginegames.gamerunning)
+				{
+					ResetGame
+					enginegames.StartGame
+					selecttab("Engine games")
+				}
 			}
 
 			if(ev.id=="abortenginegame")
@@ -992,9 +1013,7 @@ class GuiClass extends Application
 			{
 				if(boardcontrolsdisabled) return
 
-				commands.exec("r")
-
-				update
+				ResetGame
 			}
 
 			if(ev.id=="boardcontrolpaneldel")
