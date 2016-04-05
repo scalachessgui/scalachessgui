@@ -170,7 +170,7 @@ case class GEngine(
 			|</tabpane>
 			|</scrollpane>
 		""".stripMargin
-		Builder.MyStage(pathid,modal=false,set_handler=handler,title=ParseEngineNameFromPath(path)+" console",blob=blob)
+		Builder.MyStage(pathid,modal=false,set_handler=handler,title=GetDisplayName+" console",blob=blob)
 		BuildOptions
 		log.Update
 	}
@@ -343,6 +343,32 @@ case class GEngine(
 				|$td3
 				|</hbox>
 			""".stripMargin
+		}
+	}
+
+	case class Id(
+		var name:String="",
+		var author:String=""
+	)
+	{
+		def ParseLine(line:String)
+		{
+			val tokenizer=Tokenizer(line)
+			val head=tokenizer.Get
+			if(head!=null)
+			{
+				if(protocol=="UCI")
+				{
+					if(head=="id")
+					{
+						val token=tokenizer.Get
+						val value=tokenizer.GetRest
+						if(value==null) return
+						if(token=="name") name=value
+						if(token=="author") author=value
+					}
+				}
+			}
 		}
 	}
 
@@ -607,6 +633,7 @@ case class GEngine(
 				{					
 					options.Add(option)					
 				}
+				uciid.ParseLine(line)
 			}
 		}
 
@@ -750,6 +777,28 @@ case class GEngine(
 
 	var options=Options()
 	var features=Features()
+	var uciid=Id()
+
+	def GetDisplayName:String=
+	{
+		if(protocol=="UCI")
+		{
+			if(uciid.name!="")
+			{
+				if(uciid.author!="")
+				{
+					return uciid.name+" by "+uciid.author
+				} else {
+					return uciid.name
+				}
+			}
+		}
+		if(protocol=="XBOARD")
+		{
+			if(features.myname!="") return features.myname
+		}
+		ParseEngineNameFromPath(path)
+	}
 
 	def ProtocolStartup
 	{
@@ -757,6 +806,7 @@ case class GEngine(
 
 		options=Options()
 		features=Features()
+		uciid=Id()
 
 		if(protocol=="UCI")
 		{
