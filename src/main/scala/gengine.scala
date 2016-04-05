@@ -84,6 +84,17 @@ case class EngineGames(
 	var turn="white"
 	var players=Map[String,GEngine]()
 
+	def SecondsVerbal(secs:Int):String=
+	{
+		val mod=(secs%60)
+		val mins=(secs-mod)/60
+		if(mod==0)
+		{
+			return s"$mins min(s)"
+		}
+		return s"$mins min(s) $mod sec(s)"
+	}
+
 	def GetTimeControl
 	{
 		initialtime=Builder.gi("components#timecontroltime#selected",5)*60*1000
@@ -100,9 +111,9 @@ case class EngineGames(
 		players+=("white"->playerwhite)
 		players+=("black"->playerblack)
 
-		val ipmtgs=incrementpermovestogo/1000
+		val ipmtgsverbal=SecondsVerbal(incrementpermovestogo/1000)
 
-		timecontrolverbal=s"$movestogoperround moves in $ipmtgs seconds"
+		timecontrolverbal=s"$movestogoperround moves in $ipmtgsverbal"
 	}
 
 	var timestep=100
@@ -121,6 +132,8 @@ case class EngineGames(
 	{
 		val wtime=formatDuration(playerwhite.time,"HH:mm:ss")
 		val btime=formatDuration(playerblack.time,"HH:mm:ss")
+		val whitecolor="#00af00"
+		val blackcolor="#af0000"
 		val timestyle="font-size:36px; font-family: monospace; font-weight: bold; padding: 3px; border-style: solid; border-width: 2px; border-color: #000000; border-radius: 10px;"
 		var whitebckg=if(turn=="white") "#afffaf" else "#afafaf"
 		var blackbckg=if(turn=="black") "#afffaf" else "#afafaf"
@@ -128,27 +141,29 @@ case class EngineGames(
 		val namew=playerwhite.GetDisplayName
 		val nameb=playerblack.GetDisplayName
 		val namestyle="font-size: 20px; color: #0000ff;"
+		val timecontrolcolor="#0000af"
 		s"""
 			|<table cellpadding="3" cellspacing="3">
 			|<tr>
-			|<td>$sidespan White </span></td>
+			|<td>$sidespan<font color="$whitecolor">White</font></span></td>
 			|<td><span style="$timestyle background-color: $whitebckg;">$wtime</span></td>
-			|<td>$sidespan Black </span></td>
+			|<td>$sidespan<font color="$blackcolor">Black</font></span></td>
 			|<td><span style="$timestyle background-color: $blackbckg">$btime</span></td>
-			|<td>Moves to go</td>
-			|<td>$movestogo</td>
+			|<td><font color="$timecontrolcolor"><i>Moves to go $movestogo</i></td>
 			|</tr>
+			|</table>
+			|<table cellpadding="3" cellspacing="3">
 			|<tr>
 			|<td>White</td>
-			|<td style="$namestyle" colspan="3">$namew</td>
+			|<td style="$namestyle"><font color="$whitecolor">$namew</font></td>
 			|</tr>
 			|<tr>
 			|<td>Black</td>
-			|<td style="$namestyle" colspan="3">$nameb</td>
+			|<td style="$namestyle"><font color="$blackcolor">$nameb</font></td>
 			|</tr>
 			|<tr>
 			|<td>Time control</td>
-			|<td style="color: #af0000; font-size: 18px; font-weight: bold;" colspan="3"><i>$timecontrolverbal</i></td>
+			|<td style="color: $timecontrolcolor; font-size: 18px; font-weight: bold;" colspan="3"><i>$timecontrolverbal</i></td>
 			|</tr>
 			|</table>
 		""".stripMargin
@@ -168,6 +183,8 @@ case class EngineGames(
 			var interrupted=false
 			DisableBoardControls()
 			GetTimeControl
+			playerwhite.SetMultipv(1,commands.g)
+			playerblack.SetMultipv(1,commands.g)
 			Platform.runLater(new Runnable{def run{
 				playerwhite.OpenConsole
 				playerblack.OpenConsole
