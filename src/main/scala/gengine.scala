@@ -76,11 +76,15 @@ case class EngineGames(
 	}
 
 	var initialtime=300000
+	var initialtimemin=5
 	var movestogoperround=40
 	var incrementpermove=0
+	var incrementpermovesec=0
 	var incrementpermovestogo=300000
+	var incrementpermovestogomin=5
 	var timecontrolverbal=""
 	var movestogo=40
+	var level="40 5 0"
 	var turn="white"
 	var players=Map[String,GEngine]()
 
@@ -97,11 +101,15 @@ case class EngineGames(
 
 	def GetTimeControl
 	{
-		initialtime=Builder.gi("components#timecontroltime#selected",5)*60*1000
+		initialtimemin=Builder.gi("components#timecontroltime#selected",5)
+		initialtime=initialtimemin*60*1000
 		movestogoperround=Builder.gi("components#timecontrolnumberofmoves#selected",40)
 		incrementpermove=0
+		incrementpermovestogomin=initialtimemin
 		incrementpermovestogo=initialtime
 		movestogo=movestogoperround
+
+		level=s"$movestogoperround $incrementpermovestogomin $incrementpermovesec"
 
 		playerwhite.time=initialtime
 		playerblack.time=initialtime
@@ -118,6 +126,8 @@ case class EngineGames(
 
 	var timestep=100
 
+	var bestmove:String=null
+
 	def StartThinking(engine:GEngine)
 	{
 		engine.wtime=playerwhite.time
@@ -126,6 +136,7 @@ case class EngineGames(
 		engine.binc=incrementpermove
 		engine.movestogo=movestogo
 		engine.fen=commands.g.report_fen
+		engine.usermove=bestmove
 		engine.StartThinking
 	}
 
@@ -191,13 +202,15 @@ case class EngineGames(
 			GetTimeControl
 			playerwhite.SetMultipv(1,commands.g)
 			playerblack.SetMultipv(1,commands.g)
+			playerwhite.NewGame(level)
+			playerblack.NewGame(level)
 			val initturn=turn
 			var onturn=players(turn)
 			Platform.runLater(new Runnable{def run{
 				playerwhite.OpenConsole
 				playerblack.OpenConsole
 				onturn.ToTop
-			}})			
+			}})
 			StartThinking(onturn)
 			var stepcnt=0
 			var gameresult:GameResult=null
@@ -222,7 +235,8 @@ case class EngineGames(
 				}
 				else
 				{
-					val true_algeb=commands.g.b.to_true_algeb(onturn.bestmove)
+					bestmove=onturn.bestmove
+					val true_algeb=commands.g.b.to_true_algeb(bestmove)
 					val m=move(fromalgeb=true_algeb)
 					commands.g.makeMove(m)
 					Platform.runLater(new Runnable{def run{
@@ -318,6 +332,8 @@ case class GEngine(
 
 	var time=300000
 
+	var otim=300000
+
 	var wtime=300000
 
 	var btime=300000
@@ -328,11 +344,37 @@ case class GEngine(
 
 	var movestogo=40
 
+	var usermove:String=null
+
 	var thinking=false
 
 	var fen=""
 
 	def Loaded:Boolean=(engineprocess!=null)
+
+	def NewGame(level:String="40 5 0")
+	{
+		usermove=null
+
+		if(protocol=="UCI")
+		{
+			IssueCommand(s"position startpos")
+		}
+
+		if(protocol=="XBOARD")
+		{
+			IssueCommand("force")
+			IssueCommand("new")
+			IssueCommand("random")
+			if(settings.getvariant=="Atomic")
+			{
+				IssueCommand("variant atomic")
+			}
+			IssueCommand(s"level $level")
+			IssueCommand("post")
+			IssueCommand("hard")
+		}
+	}
 
 	def StartThinking
 	{
@@ -343,6 +385,20 @@ case class GEngine(
 			IssueCommand(s"position fen $fen")
 			IssueCommand(s"go wtime $wtime btime $btime winc $winc binc $binc movestogo $movestogo")
 		}
+
+		if(protocol=="XBOARD")
+		{
+			if(usermove!=null)
+			{
+				IssueCommand(s"usermove $usermove")
+			} else {
+				IssueCommand("go")
+			}
+			IssueCommand(s"time $time")
+			IssueCommand(s"otim $otim")
+		}
+
+		
 
 		thinking=true
 	}
@@ -961,11 +1017,23 @@ case class GEngine(
 			thinkingoutput.ParseLine(line)
 		}
 
+		var tokenizer=Tokenizer(line)
+
 		if(protocol=="UCI")
 		{
-			var tokenizer=Tokenizer(line)
 			val token=tokenizer.Get
 			if(token=="bestmove")
+			{
+				bestmovereceived=true
+				bestmove=tokenizer.Get
+				thinking=false
+			}
+		}
+
+		if(protocol=="XBOARD")
+		{
+			val token=tokenizer.Get
+			if(token=="move")
 			{
 				bestmovereceived=true
 				bestmove=tokenizer.Get
@@ -1515,6 +1583,18 @@ case class GEngine(
 		return default
 	}
 
+	def IsInt(str:String):Boolean=
+	{
+		if(str==null) return false
+		try
+		{
+			val intvalue=str.toInt
+			return true
+		}
+		catch{case e: Throwable => {}}
+		return false
+	}
+
 	case class PvItem(
 		var multipv:Int=0,
 		var hasmultipv:Boolean=false,
@@ -1625,6 +1705,25 @@ case class GEngine(
 							pvreststr=pvrest.mkString(" ")
 						}
 					}
+				}
+			}
+			if(protocol=="XBOARD")
+			{
+				val parts=line.split(" ").toList
+				val len=parts.length
+				if(len< 5) return this
+				if(IsInt(parts(0))&&IsInt(parts(1))&&IsInt(parts(2))&&IsInt(parts(3)))
+				{
+					depth=ParseInt(parts(0),depth)
+					hasdepth=true
+					scorenumerical=ParseInt(parts(1),depth)
+					hasscore=true
+					pv=parts(4)
+					haspv=true
+					val pvtokens=Tokens(pv)
+					bestmove=pvtokens.head
+					pvrest=pvtokens.tail
+					pvreststr=pvrest.mkString(" ")
 				}
 			}
 			return this
