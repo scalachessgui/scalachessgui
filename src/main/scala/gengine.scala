@@ -390,7 +390,10 @@ case class GEngine(
 
 	def StartThinking
 	{
+
 		thinkingoutput=ThinkingOutput()
+
+		thinking=true
 
 		if(protocol=="UCI")
 		{
@@ -416,7 +419,6 @@ case class GEngine(
 			IssueCommand(s"otim $otim")
 		}		
 
-		thinking=true
 	}
 
 	def SetPath(p:String)
@@ -1689,6 +1691,20 @@ case class GEngine(
 		{
 			s"$bestmove $signedscorenumerical depth $depth nodes $nodes nps $nps pv $pvreststr"
 		}
+		def FormatNodes(nodes:Int,unit:Int):String=
+		{
+			"%.2f".format(nodes.toDouble/unit.toDouble)
+		}
+		def GetNodesVerbal(nodes:Int):String=
+		{
+			if(nodes< 1000) return ""+nodes else
+			if(nodes< 1000000) return ""+FormatNodes(nodes,1000)+" kN" else return FormatNodes(nodes,1000000)+" MN"
+		}
+		def GetNpsVerbal(nodes:Int):String=
+		{
+			if(nps< 1000) return ""+nps else
+			if(nps< 1000000) return ""+FormatNodes(nps,1000)+" kN/s" else return FormatNodes(nps,1000000)+" MN/s"
+		}
 		def ParseLine(line:String):PvItem=
 		{
 			val tokenizer=Tokenizer(line)
@@ -1732,22 +1748,16 @@ case class GEngine(
 						depth=ParseInt(tokenizer.Get,depth)
 						hasdepth=true
 					}
-					def FormatNodes(nodes:Int,unit:Int):String=
-					{
-						"%.2f".format(nodes.toDouble/unit.toDouble)
-					}
 					if(name=="nodes")
 					{
 						nodes=ParseInt(tokenizer.Get,nodes)
-						if(nodes< 1000) nodesverbal=""+nodes else
-						if(nodes< 1000000) nodesverbal=""+FormatNodes(nodes,1000)+" kN" else nodesverbal=FormatNodes(nodes,1000000)+" MN"
+						nodesverbal=GetNodesVerbal(nodes)
 						hasnodes=true
 					}
 					if(name=="nps")
 					{
 						nps=ParseInt(tokenizer.Get,nps)
-						if(nps< 1000) npsverbal=""+nps else
-						if(nps< 1000000) npsverbal=""+FormatNodes(nps,1000)+" kN/s" else npsverbal=FormatNodes(nps,1000000)+" MN/s"
+						npsverbal=GetNodesVerbal(nps)
 						hasnps=true
 					}
 					if(name=="time")
@@ -1780,15 +1790,21 @@ case class GEngine(
 					hasdepth=true
 
 					scorenumerical=ParseInt(parts(1),depth)
+					scoreverbal=if(scorenumerical>0) "+"+scorenumerical else ""+scorenumerical
 					hasscore=true
 
-					time=ParseInt(parts(2),time)
+					time=ParseInt(parts(2),time)*10
 					hastime=true
 
-					nodes=ParseInt(parts(3),time)
+					nodes=ParseInt(parts(3),nodes)
+					nodesverbal=GetNodesVerbal(nodes)
 					hasnodes=true
 
-					pv=parts(4)
+					tokenizer.Get
+					tokenizer.Get
+					tokenizer.Get
+					tokenizer.Get
+					pv=tokenizer.GetRest
 					haspv=true
 					val pvtokens=Tokens(pv)
 					bestmove=pvtokens.head
