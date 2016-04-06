@@ -128,7 +128,7 @@ case class EngineGames(
 
 	var bestmove:String=null
 
-	def StartThinking(engine:GEngine)
+	def StartThinking(engine:GEngine,turn:String,issuego:Boolean)
 	{
 		engine.wtime=playerwhite.time
 		engine.btime=playerblack.time
@@ -137,6 +137,8 @@ case class EngineGames(
 		engine.movestogo=movestogo
 		engine.fen=commands.g.report_fen
 		engine.usermove=bestmove
+		engine.issuego=issuego
+		if(turn=="white") engine.otim=playerblack.time else engine.otim=playerwhite.time
 		engine.StartThinking
 	}
 
@@ -198,6 +200,8 @@ case class EngineGames(
 			gamerunning=true
 			var cnt=0
 			var interrupted=false
+			bestmove=null
+			var issuego=true
 			DisableBoardControls()
 			GetTimeControl
 			playerwhite.SetMultipv(1,commands.g)
@@ -211,7 +215,7 @@ case class EngineGames(
 				playerblack.OpenConsole
 				onturn.ToTop
 			}})
-			StartThinking(onturn)
+			StartThinking(onturn,turn,true)
 			var stepcnt=0
 			var gameresult:GameResult=null
 			while((!Thread.currentThread.isInterrupted())&&(!interrupted)&&(gameresult==null))
@@ -254,7 +258,8 @@ case class EngineGames(
 						Platform.runLater(new Runnable{def run{
 							onturn.ToTop
 						}})			
-						StartThinking(onturn)
+						StartThinking(onturn,turn,issuego)
+						issuego=false
 						if(turn==initturn)
 						{
 							movestogo-=1
@@ -273,8 +278,8 @@ case class EngineGames(
 					stepcnt+=1
 				}
 			}
-			playerwhite.Stop
-			playerblack.Stop
+			playerwhite.StopForced
+			playerblack.StopForced
 			if(gameresult==null)
 			{
 				Update(UpdateGameStatus+"<br>Game aborted.")
@@ -346,11 +351,21 @@ case class GEngine(
 
 	var usermove:String=null
 
+	var issuego=true
+
 	var thinking=false
 
 	var fen=""
 
 	def Loaded:Boolean=(engineprocess!=null)
+
+	def IssueVariantXBOARD
+	{
+		if(settings.getvariant=="Atomic")
+		{
+			IssueCommand("variant atomic")
+		}
+	}
 
 	def NewGame(level:String="40 5 0")
 	{
@@ -363,16 +378,13 @@ case class GEngine(
 
 		if(protocol=="XBOARD")
 		{
-			IssueCommand("force")
 			IssueCommand("new")
 			IssueCommand("random")
-			if(settings.getvariant=="Atomic")
-			{
-				IssueCommand("variant atomic")
-			}
+			IssueVariantXBOARD
 			IssueCommand(s"level $level")
 			IssueCommand("post")
 			IssueCommand("hard")
+			IssueCommand("force")
 		}
 	}
 
@@ -391,14 +403,18 @@ case class GEngine(
 			if(usermove!=null)
 			{
 				IssueCommand(s"usermove $usermove")
-			} else {
+				if(issuego)
+				{
+					IssueCommand("go")
+				}
+			}
+			else
+			{
 				IssueCommand("go")
 			}
 			IssueCommand(s"time $time")
 			IssueCommand(s"otim $otim")
-		}
-
-		
+		}		
 
 		thinking=true
 	}
@@ -1442,6 +1458,29 @@ case class GEngine(
 		{
 			if(commandaftersetfen!="") IssueCommand(commandaftersetfen)
 		}
+		if(protocol=="XBOARD")
+		{
+			val truealgebline=g.current_line_true_algeb_moves
+			if(truealgebline.length==0) return
+
+			if(autosetfen)
+			{
+				val infinitethinkingtime=24*60*1000
+				IssueCommand("exit")
+				IssueCommand("force")
+				IssueCommand("new")
+				IssueCommand("force")
+				IssueCommand("post")
+				IssueCommand("hard")
+				IssueVariantXBOARD
+				IssueCommand("analyze")
+				for(truealgeb<-truealgebline)
+				{
+					IssueCommand(s"usermove $truealgeb")
+				}
+				running=true
+			}
+		}
 		if(protocol=="UCI")
 		{
 			val fen=g.report_fen
@@ -1486,9 +1525,29 @@ case class GEngine(
 
 	def Stop
 	{
+		StopInner()
+	}
+
+	def StopForced
+	{
+		StopInner(forced=true)
+	}
+
+	def StopInner(forced:Boolean=false)
+	{
 		if(engineprocess==null) return
 		if(startup) return
-		if(!running) return
+		if(!forced)
+		{
+			if(!running) return
+		}
+		if(protocol=="XBOARD")
+		{
+			IssueCommand("force")
+			IssueCommand("exit")
+			Thread.sleep(200)
+			running=false
+		}
 		if(protocol=="UCI")
 		{
 			bestmovereceived=false
@@ -1498,9 +1557,12 @@ case class GEngine(
 			} else {
 				IssueCommand("stop")
 			}
-			while(!bestmovereceived)
+			if(!forced)
 			{
-				Thread.sleep(50)
+				while(!bestmovereceived)
+				{
+					Thread.sleep(50)
+				}
 			}
 			running=false
 		}
@@ -1509,7 +1571,7 @@ case class GEngine(
 	def CheckRestart(g:game)
 	{
 		if(engineprocess==null) return
-		if(running||(!GetBoolOption("Auto start",true)))
+		if(running&&(GetBoolOption("Auto start",true)))
 		{
 			Stop
 			Start(g)
@@ -1716,8 +1778,16 @@ case class GEngine(
 				{
 					depth=ParseInt(parts(0),depth)
 					hasdepth=true
+
 					scorenumerical=ParseInt(parts(1),depth)
 					hasscore=true
+
+					time=ParseInt(parts(2),time)
+					hastime=true
+
+					nodes=ParseInt(parts(3),time)
+					hasnodes=true
+
 					pv=parts(4)
 					haspv=true
 					val pvtokens=Tokens(pv)

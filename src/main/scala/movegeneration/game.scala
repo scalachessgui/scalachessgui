@@ -36,7 +36,9 @@ case class gameNode(
 	parent:gameNode=null,
 	fullmove_number:Int=0,
 	turn:Char=' ',
-	num_checks:Map[TColor,Int]=Map(WHITE->0,BLACK->0)
+	num_checks:Map[TColor,Int]=Map(WHITE->0,BLACK->0),
+	genAlgeb:String="",
+	genTrueAlgeb:String=""
 	)
 {
 
@@ -232,6 +234,24 @@ class game
 		a.reverse
 	}
 
+	def current_line_true_algeb_moves:ArrayBuffer[String]=
+	{
+		var a=ArrayBuffer[String]()
+
+		var cn=current_node
+
+		while(cn!=root)
+		{
+
+			a+=cn.genTrueAlgeb
+
+			cn=cn.parent
+
+		}
+
+		a.reverse
+	}
+
 	def book_enabled=Builder.gb("components#bookenabled",true)
 
 	def pos_changed
@@ -374,6 +394,7 @@ class game
 		}
 
 		val san=b.toSan(m)
+		val algeb=m.toAlgeb
 
 		if(san!=null)
 		{
@@ -392,7 +413,9 @@ class game
 						parent=current_node,
 						fullmove_number=b.fullmove_number,
 						turn=colorLetterOf(b.turn),
-						num_checks=Map(WHITE->b.num_checks(WHITE),BLACK->b.num_checks(BLACK))
+						num_checks=Map(WHITE->b.num_checks(WHITE),BLACK->b.num_checks(BLACK)),
+						genAlgeb=algeb,
+						genTrueAlgeb=b.to_true_algeb(algeb)
 					)
 				current_node.childs+=(san->newNode)
 				current_node=newNode
