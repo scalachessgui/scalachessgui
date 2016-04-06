@@ -228,6 +228,23 @@ class board
 	def getpawndistfrombase(sq:TSquare)=pawnDistFromBase(toColor(PAWN,turn),sq)
 	def getpawndistfromprom(sq:TSquare)=pawnDistFromProm(toColor(PAWN,turn),sq)
 
+	def to_true_algeb(algeb:String):String=
+	{
+		val whitekingalgeb=toAlgeb(whereIsKing(WHITE))
+		if(whitekingalgeb=="e1")
+		{
+			if(algeb=="e1c1") return "e1a1"
+			if(algeb=="e1g1") return "e1h1"
+		}
+		val blackkingalgeb=toAlgeb(whereIsKing(BLACK))
+		if(blackkingalgeb=="e8")
+		{
+			if(algeb=="e8c8") return "e8a8"
+			if(algeb=="e8g8") return "e8h8"
+		}		
+		return algeb
+	}
+
 	def canCastleToSide(side:Int,c:TColor=getturn):Boolean=
 		if(c==WHITE)
 		return (castling_rights&(if(side==KINGSIDE) CASTLE_K else CASTLE_Q))!=0
@@ -422,6 +439,14 @@ class board
 				r
 			}).mkString("\n")+"\n"
 		pattern
+	}
+
+	def report_trunc_fen:String=
+	{
+		val fen=report_fen
+		val parts=fen.split(" ").toList
+		val trunc_fen=parts(0)+" "+parts(1)+" "+parts(2)+" "+parts(3)
+		trunc_fen
 	}
 
 	def report_fen:String=

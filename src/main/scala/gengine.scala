@@ -124,6 +124,7 @@ case class EngineGames(
 		engine.btime=playerblack.time
 		engine.winc=incrementpermove
 		engine.binc=incrementpermove
+		engine.movestogo=movestogo
 		engine.fen=commands.g.report_fen
 		engine.StartThinking
 	}
@@ -177,6 +178,11 @@ case class EngineGames(
 			Update(selectplayersmessage)
 			return
 		}
+		if(commands.g.report_result!=null)
+		{
+			Update("Game starting position is final. Game could not be started.")
+			return
+		}
 		gamethread=new Thread(new Runnable{def run{
 			gamerunning=true
 			var cnt=0
@@ -185,15 +191,17 @@ case class EngineGames(
 			GetTimeControl
 			playerwhite.SetMultipv(1,commands.g)
 			playerblack.SetMultipv(1,commands.g)
+			val initturn=turn
+			var onturn=players(turn)
 			Platform.runLater(new Runnable{def run{
 				playerwhite.OpenConsole
 				playerblack.OpenConsole
-			}})
-			val initturn=turn
-			var onturn=players(turn)
+				onturn.ToTop
+			}})			
 			StartThinking(onturn)
 			var stepcnt=0
-			while((!Thread.currentThread.isInterrupted())&&(!interrupted))
+			var gameresult:GameResult=null
+			while((!Thread.currentThread.isInterrupted())&&(!interrupted)&&(gameresult==null))
 			{
 				if((stepcnt%5)==0)
 				{
@@ -202,34 +210,64 @@ case class EngineGames(
 				if(onturn.thinking)
 				{
 					onturn.time-=timestep
+					if(onturn.time<=0)
+					{
+						if(turn=="white")
+						{
+							gameresult=GameResult(-1,"0-1","white lost on time")
+						} else {
+							gameresult=GameResult(1,"1-0","black lost on time")
+						}
+					}
 				}
 				else
 				{
-					val m=move(fromalgeb=onturn.bestmove)
+					val true_algeb=commands.g.b.to_true_algeb(onturn.bestmove)
+					val m=move(fromalgeb=true_algeb)
 					commands.g.makeMove(m)
 					Platform.runLater(new Runnable{def run{
 						GuiUpdate()
 					}})
-					if(turn=="white") turn="black" else turn="white"
-					onturn=players(turn)
-					StartThinking(onturn)
-					if(turn==initturn)
+					gameresult=commands.g.report_result
+					if(gameresult!=null)
 					{
-						movestogo-=1
+
 					}
-					if(movestogo==0)
+					else
 					{
-						movestogo=movestogoperround
-						playerwhite.time+=incrementpermovestogo
-						playerblack.time+=incrementpermovestogo
+						if(turn=="white") turn="black" else turn="white"
+						onturn=players(turn)
+						Platform.runLater(new Runnable{def run{
+							onturn.ToTop
+						}})			
+						StartThinking(onturn)
+						if(turn==initturn)
+						{
+							movestogo-=1
+						}
+						if(movestogo==0)
+						{
+							movestogo=movestogoperround
+							playerwhite.time+=incrementpermovestogo
+							playerblack.time+=incrementpermovestogo
+						}
 					}
 				}
-				try{Thread.sleep(timestep)}catch{case e:Throwable=>{interrupted=true}}
-				stepcnt+=1
+				if(gameresult==null)
+				{
+					try{Thread.sleep(timestep)}catch{case e:Throwable=>{interrupted=true}}
+					stepcnt+=1
+				}
 			}
 			playerwhite.Stop
 			playerblack.Stop
-			Update(UpdateGameStatus+"<br>Game aborted.")
+			if(gameresult==null)
+			{
+				Update(UpdateGameStatus+"<br>Game aborted.")
+			} else {
+				var resultverbal=gameresult.resultstr+" ( "+gameresult.resultreason+" )"
+				Update(UpdateGameStatus+s"<br>Game finished. Result: $resultverbal")
+			}
 			EnableBoardControls()
 			gamerunning=false
 		}})
@@ -379,6 +417,14 @@ case class GEngine(
 		{
 			Builder.closeStage(pathid)
 		}
+	}
+
+	def ToTop
+	{
+		if(Builder.stages.contains(pathid))
+		{
+			Builder.stages(pathid).ToTop
+		}	
 	}
 
 	def OpenConsole
@@ -1618,11 +1664,13 @@ case class GEngine(
 		def ReportHTMLTableRow:String=
 		{
 			val scorecolor=if(scorenumerical>=0) "#007f00" else "#7f0000"
+			val timeformatted=formatDuration(time,"HH:mm:ss")
 			s"""
 			|<tr>
 			|<td><font color="blue">$bestmove</font></td>
 			|<td><font color="$scorecolor">$scoreverbal</font></td>
 			|<td>$depth</td>
+			|<td>$timeformatted</td>
 			|<td>$nodesverbal</td>
 			|<td>$npsverbal</td>
 			|<td><font color="#00007f">$pvreststr</font></td>
@@ -1659,6 +1707,7 @@ case class GEngine(
 				|<td>Move</td>
 				|<td>Score</td>
 				|<td>Depth</td>
+				|<td>Time</td>
 				|<td>Nodes</td>
 				|<td>Nps</td>
 				|<td>Pv</td>
@@ -1955,7 +2004,6 @@ case class GEngineList(var we:WebEngine=null)
 			|</script>
 			|</head>
 			|<body>
-			|Under construction!<br>
 			|<input type="button" value="Add new engine" onclick="command='add';""><br>
 			|$listhtml
 			|</body>

@@ -2,6 +2,7 @@ package game
 
 import board._
 import move._
+import square._
 import piece.piece._
 import book._
 import utils.Timer
@@ -18,6 +19,15 @@ import org.apache.commons.io.FileUtils._
 
 import settings.settings._
 import builder._
+
+case class GameResult(
+	var resultint:Int=0,
+	var resultstr:String="1/2-1/2",
+	var resultreason:String="draw by threefold repetition"
+)
+{
+
+}
 
 case class gameNode(
 	genSan:String="",
@@ -98,6 +108,56 @@ class game
 	reset
 
 	/////////////////////////////////////////////////////////////
+
+	def report_trunc_fen:String=b.report_trunc_fen
+
+	def truncate_fen(fen:String):String=
+	{
+		val parts=fen.split(" ").toList
+		val trunc_fen=parts(0)+" "+parts(1)+" "+parts(2)+" "+parts(3)
+		trunc_fen
+	}
+
+	def report_result:GameResult=
+	{
+		b.genMoveList
+		val haslegal=(b.move_list.length>0)
+		if(haslegal)
+		{
+			var fen_cnt=1
+			var node_ptr=current_node
+			val trunc_fen=truncate_fen(node_ptr.fen)
+			while((node_ptr.parent!=null)&&(fen_cnt< 3))
+			{
+				node_ptr=node_ptr.parent
+				if(truncate_fen(node_ptr.fen)==trunc_fen) fen_cnt+=1
+			}
+			if(fen_cnt>=3)
+			{
+				return GameResult(0,"1/2-1/2","draw by threefold repetition")
+			}
+			return null
+		} else if(b.isInCheck) {
+			if(b.turn==WHITE)
+			{
+				if(b.whereIsKing(WHITE)!=square.NO_SQUARE)
+				{
+					return GameResult(-1,"0-1","white checkmated")
+				} else {
+					return GameResult(-1,"0-1","white king destroyed")
+				}
+			} else {
+				if(b.whereIsKing(BLACK)!=square.NO_SQUARE)
+				{
+					return GameResult(1,"1-0","black checkmated")
+				} else {
+					return GameResult(1,"1-0","black king destroyed")
+				}
+			}
+		} else {
+			return GameResult(0,"1/2-1/2","stalemate")
+		}
+	}
 
 	def from_pgn_and_current_line(pgn:String,currentline:String)
 	{
