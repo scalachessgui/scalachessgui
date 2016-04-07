@@ -401,7 +401,7 @@ case class GEngine(
 			IssueCommand(s"go wtime $wtime btime $btime winc $winc binc $binc movestogo $movestogo")
 		}
 
-		if(protocol=="XBOARD")
+		def IssueXBOARDStart
 		{
 			if(usermove!=null)
 			{
@@ -415,10 +415,26 @@ case class GEngine(
 			{
 				IssueCommand("go")
 			}
+		}
+
+		def IssueXBOARDTimeControl
+		{
 			val centitime:Int=(time/10).toInt
 			val centiotim:Int=(otim/10).toInt
 			IssueCommand(s"time $centitime")
 			IssueCommand(s"otim $centiotim")
+		}
+
+		if(protocol=="XBOARD")
+		{			
+			if(features.colors)
+			{
+				IssueXBOARDStart
+				IssueXBOARDTimeControl
+			} else {
+				IssueXBOARDTimeControl
+				IssueXBOARDStart
+			}
 		}		
 
 	}
@@ -890,6 +906,7 @@ case class GEngine(
 	case class Features(
 		var setboard:Boolean=false,
 		var analyze:Boolean=true,
+		var colors:Boolean=true,
 		var done:Boolean=false,
 		var myname:String=""
 	)
@@ -952,6 +969,7 @@ case class GEngine(
 					if(feature=="myname") myname=value
 					if((feature=="setboard")&&(value=="1")) setboard=true
 					if((feature=="analyze")&&(value=="0")) analyze=false
+					if((feature=="colors")&&(value=="0")) colors=false
 					if((feature=="done")&&(value=="1")) done=true
 
 					if(feature=="option")
@@ -1218,7 +1236,7 @@ case class GEngine(
 		var cnt=0
 		while((startup)&&(cnt< 20))
 		{
-			Thread.sleep(100)
+			try{Thread.sleep(100)}catch{case e:Throwable=>{}}
 			cnt+=1
 		}
 
@@ -1549,7 +1567,7 @@ case class GEngine(
 		{
 			IssueCommand("force")
 			IssueCommand("exit")
-			Thread.sleep(200)
+			try{Thread.sleep(200)}catch{case e:Throwable=>{}}
 			running=false
 		}
 		if(protocol=="UCI")
@@ -1565,7 +1583,7 @@ case class GEngine(
 			{
 				while(!bestmovereceived)
 				{
-					Thread.sleep(50)
+					try{Thread.sleep(50)}catch{case e:Throwable=>{}}
 				}
 			}
 			running=false

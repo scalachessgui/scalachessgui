@@ -1239,7 +1239,7 @@ class GuiClass extends Application
 
 	def engine_hint(dur: Int) {
 		engine_start()
-		Thread.sleep(dur)
+		try{Thread.sleep(dur)}catch{case e:Throwable=>{}}
 		engine_stop()
 		engine_make()
 	}
@@ -1316,7 +1316,7 @@ class GuiClass extends Application
 
 		while(engine.uci_puff.indexOf("uciok")<0)
 		{
-			Thread.sleep(100)
+			try{Thread.sleep(100)}catch{case e:Throwable=>{}}
 		}
 
 		var options=Map[String,Map[String,String]]()
@@ -1577,7 +1577,7 @@ class GuiClass extends Application
 		var to=m.to
 
 		click_square(m.from,settings.flip)
-		Thread.sleep(50)
+		try{Thread.sleep(50)}catch{case e:Throwable=>{}}
 		click_square(m.to,settings.flip)
 	}
 
@@ -1695,7 +1695,7 @@ class GuiClass extends Application
 			}
 			else
 			{				
-				Thread.sleep(50)
+				try{Thread.sleep(50)}catch{case e:Throwable=>{}}
 			}
 		}
 
@@ -1799,7 +1799,7 @@ class GuiClass extends Application
 		{
 			engine_hint(450)
 
-			Thread.sleep(400)
+			try{Thread.sleep(400)}catch{case e:Throwable=>{}}
 
 			learn_start
 		}
