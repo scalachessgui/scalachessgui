@@ -1,0 +1,8 @@
+<vbox padding="5" gap="5">
+	<hbox padding="5" gap="5" width="400">
+		<label text="Number of moves"/>
+		<combo id="timecontrolnumberofmoves"/>
+		<label text="Time"/>
+		<combo id="timecontroltime"/>
+	</hbox>
+</vbox>
