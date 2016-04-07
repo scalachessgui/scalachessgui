@@ -415,8 +415,10 @@ case class GEngine(
 			{
 				IssueCommand("go")
 			}
-			IssueCommand(s"time $time")
-			IssueCommand(s"otim $otim")
+			val centitime:Int=(time/10).toInt
+			val centiotim:Int=(otim/10).toInt
+			IssueCommand(s"time $centitime")
+			IssueCommand(s"otim $centiotim")
 		}		
 
 	}
