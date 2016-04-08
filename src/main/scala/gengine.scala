@@ -604,7 +604,8 @@ case class GEngine(
 		var minstr:String="",
 		var maxstr:String="",
 		var defaultstr:String="",
-		var send:Boolean=true
+		var send:Boolean=true,
+		var subkind:String=""
 	)
 	{
 		def Apply
@@ -620,6 +621,17 @@ case class GEngine(
 				if(protocol=="UCI")
 				{
 					IssueCommand("setoption name "+name+" value "+value)
+				}
+
+				if(protocol=="XBOARD")
+				{
+					var xboardvalue=value
+					if(kind=="check")
+					{
+						xboardvalue=if(value=="true") "1" else "0"
+					}
+
+					IssueCommand("option "+name+"="+xboardvalue)
 				}
 			}
 		}
@@ -835,7 +847,7 @@ case class GEngine(
 				}
 				if(protocol=="XBOARD")
 				{
-					
+					IssueCommand("option "+truename+"="+value)
 				}
 			} else {
 				if(protocol=="UCI")
@@ -863,7 +875,7 @@ case class GEngine(
 			}
 			if(protocol=="XBOARD")
 			{
-				
+				IssueCommand("option "+slidername+"="+sliderint)
 			}
 		}
 
@@ -881,7 +893,8 @@ case class GEngine(
 			}
 			if(protocol=="XBOARD")
 			{
-				
+				val xboardcheckboxbool=if(checkboxbool=="true") "1" else "0"
+				IssueCommand("option "+checkboxname+"="+xboardcheckboxbool)
 			}
 		}
 	}
@@ -901,6 +914,14 @@ case class GEngine(
 		val scenegraph=Builder.build(s"$pathid#enginesettingsvboxscenegraph",options_handler,blob=blob)
 		svbox.getChildren().clear()
 		svbox.getChildren().add(scenegraph)
+	}
+
+	def ParseXBOARDBool(str:String,default:Boolean):Boolean=
+	{
+		if(str==null) return default
+		if(str=="1") return true
+		if(str=="0") return false
+		return default
 	}
 
 	case class Features(
@@ -998,8 +1019,36 @@ case class GEngine(
 							{
 								val name=nameparts.mkString(" ")
 								kind=kind.substring(1)
-								val option=Option(kind=kind,name=name)
-								options.Add(option)
+
+								if(kind=="check")
+								{
+									val checkdefaulttoken=vtokenizer.Get
+									val checkdefaultstr=""+ParseXBOARDBool(checkdefaulttoken,false)									
+									val option=Option(kind=kind,name=name,defaultstr=checkdefaultstr)
+									options.Add(option)
+								} else if((kind=="spin")||(kind=="slider")) {
+									val spindefaulttoken=vtokenizer.Get
+									val spindefaultstr=""+ParseInt(spindefaulttoken,1)
+									val spinmintoken=vtokenizer.Get
+									val spinminstr=""+ParseInt(spinmintoken,0)
+									val spinmaxtoken=vtokenizer.Get
+									val spinmaxstr=""+ParseInt(spinmaxtoken,0)
+									val option=Option(kind="spin",name=name,
+										defaultstr=spindefaultstr,minstr=spinminstr,maxstr=spinmaxstr,subkind=kind)
+									options.Add(option)
+								} else if((kind=="button")||(kind=="save")||(kind=="reset")) {
+									val option=Option(kind="button",name=name,subkind=kind)
+									options.Add(option)
+								} else if((kind=="string")||(kind=="file")||(kind=="path")) {
+									val stringdefaulttoken=vtokenizer.GetRest
+									val stringdefaultstr=if(stringdefaulttoken==null) "" else stringdefaulttoken
+									val option=Option(kind="string",name=name,defaultstr=stringdefaultstr,subkind=kind)
+									options.Add(option)
+								} else if(kind=="combo") {
+									// not implemented
+								} else {
+									// unknown option
+								}
 							}
 						}
 					}
