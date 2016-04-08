@@ -18,6 +18,7 @@
 			<menu text="Engine games">
 				<menuitem id="enginegamestimecontrol" text="Time control"></menuitem>
 				<menuitem id="startenginegame" text="Start game"></menuitem>
+				<menuitem id="startenginegamefromcurrentposition" text="Start game from current position"></menuitem>
 				<menuitem id="abortenginegame" text="Abort game"></menuitem>
 			</menu>
 			<menu text="PGN">

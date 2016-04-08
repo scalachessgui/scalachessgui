@@ -75,6 +75,8 @@ case class EngineGames(
 		return false
 	}
 
+	var isconventional=true
+	var isincremental=false
 	var initialtime=300000
 	var initialtimemin=5
 	var movestogoperround=40
@@ -101,12 +103,30 @@ case class EngineGames(
 
 	def GetTimeControl
 	{
-		initialtimemin=Builder.gi("components#timecontroltime#selected",5)
+		isconventional=Builder.gcb("timecontrolconventional",true)
+		isincremental=Builder.gcb("timecontrolincremental",false)
+
+		initialtimemin=Builder.gci("timecontroltime#selected",5)
+
+		incrementpermovesec=0
+
+		if(isincremental)
+		{
+			initialtimemin=Builder.gci("timecontrolincrementaltime#selected",2)
+			incrementpermovesec=Builder.gci("timecontrolincrementalincrement#selected",3)
+		}
+
+		incrementpermove=incrementpermovesec*1000
+
 		initialtime=initialtimemin*60*1000
-		movestogoperround=Builder.gi("components#timecontrolnumberofmoves#selected",40)
-		incrementpermove=0
+
 		incrementpermovestogomin=initialtimemin
 		incrementpermovestogo=initialtime
+
+		movestogoperround=Builder.gci("timecontrolnumberofmoves#selected",40)
+
+		if(isincremental) movestogoperround=0
+
 		movestogo=movestogoperround
 
 		level=s"$movestogoperround $incrementpermovestogomin $incrementpermovesec"
@@ -121,7 +141,12 @@ case class EngineGames(
 
 		val ipmtgsverbal=SecondsVerbal(incrementpermovestogo/1000)
 
-		timecontrolverbal=s"$movestogoperround moves in $ipmtgsverbal"
+		timecontrolverbal=s"$movestogoperround move(s) in $ipmtgsverbal"
+
+		if(isincremental)
+		{
+			timecontrolverbal=s"$initialtimemin min(s) + $incrementpermovesec sec(s)"
+		}
 	}
 
 	var timestep=100
@@ -156,6 +181,7 @@ case class EngineGames(
 		val nameb=playerblack.GetDisplayName
 		val namestyle="font-size: 20px; color: #0000ff;"
 		val timecontrolcolor="#0000af"
+		val timecontrolinfo=if(isconventional) s"<i><font size=5><b>$movestogo</b></font> move(s) to go</i>" else ""
 		s"""
 			|<table cellpadding="3" cellspacing="3">
 			|<tr>
@@ -163,7 +189,7 @@ case class EngineGames(
 			|<td><span style="$timestyle background-color: $whitebckg;">$wtime</span></td>
 			|<td>$sidespan<font color="$blackcolor">Black</font></span></td>
 			|<td><span style="$timestyle background-color: $blackbckg">$btime</span></td>
-			|<td><font color="$timecontrolcolor"><i>Moves to go $movestogo</i></td>
+			|<td><font color="$timecontrolcolor">$timecontrolinfo</td>
 			|</tr>
 			|</table>
 			|<table cellpadding="3" cellspacing="3">
@@ -183,12 +209,17 @@ case class EngineGames(
 		""".stripMargin
 	}
 
-	def StartGame
+	def StartGame(fromposition:Boolean=false)
 	{
 		if(gamerunning) return
 		if(!SelectPlayers)
 		{
 			Update(selectplayersmessage)
+			return
+		}
+		if((!playerwhite.CanSetboard)||(!playerblack.CanSetboard))
+		{
+			Update("Engine support for starting game from a given position is missing. Game could not be started.")
 			return
 		}
 		if(commands.g.report_result!=null)
@@ -206,8 +237,9 @@ case class EngineGames(
 			GetTimeControl
 			playerwhite.SetMultipv(1,commands.g)
 			playerblack.SetMultipv(1,commands.g)
-			playerwhite.NewGame(level)
-			playerblack.NewGame(level)
+			val fen=commands.g.report_fen
+			playerwhite.NewGame(level,fromposition,fen)
+			playerblack.NewGame(level,fromposition,fen)
 			val initturn=turn
 			var onturn=players(turn)
 			Platform.runLater(new Runnable{def run{
@@ -262,13 +294,24 @@ case class EngineGames(
 						issuego=false
 						if(turn==initturn)
 						{
-							movestogo-=1
+							if(isconventional)
+							{
+								movestogo-=1
+							}
 						}
-						if(movestogo==0)
+						if(isconventional)
 						{
-							movestogo=movestogoperround
-							playerwhite.time+=incrementpermovestogo
-							playerblack.time+=incrementpermovestogo
+							if(movestogo==0)
+							{
+								movestogo=movestogoperround
+								playerwhite.time+=incrementpermovestogo
+								playerblack.time+=incrementpermovestogo
+							}
+						}
+						if(isincremental)
+						{
+							playerwhite.time+=incrementpermove
+							playerblack.time+=incrementpermove
 						}
 					}
 				}
@@ -280,6 +323,10 @@ case class EngineGames(
 			}
 			playerwhite.StopForced
 			playerblack.StopForced
+			Platform.runLater(new Runnable{def run{
+				playerwhite.Reuse
+				playerblack.Reuse
+			}})
 			if(gameresult==null)
 			{
 				Update(UpdateGameStatus+"<br>Game aborted.")
@@ -329,6 +376,8 @@ case class GEngine(
 
 	var autoload=false
 
+	var xboardstate="Observing"
+
 	val globalhandler=set_handler
 
 	FromData(enginedata)
@@ -359,6 +408,38 @@ case class GEngine(
 
 	def Loaded:Boolean=(engineprocess!=null)
 
+	def CanSetboard:Boolean=
+	{
+		if(protocol=="UCI") return true
+
+		if(protocol=="XBOARD")
+		{
+			if(features.setboard) return true
+			return false
+		}
+
+		return false
+	}
+
+	def Reload
+	{
+		if(!Loaded) return
+		Unload
+		Load
+		OpenConsole
+	}
+
+	def Reuse
+	{
+		if(protocol=="XBOARD")
+		{
+			if(features.reuse)
+			{
+				Reload
+			}
+		}
+	}
+
 	def IssueVariantXBOARD
 	{
 		if(settings.getvariant=="Atomic")
@@ -367,13 +448,20 @@ case class GEngine(
 		}
 	}
 
-	def NewGame(level:String="40 5 0")
+	def NewGame(level:String="40 5 0",fromposition:Boolean=false,fen:String="")
 	{
 		usermove=null
 
 		if(protocol=="UCI")
 		{
-			IssueCommand(s"position startpos")
+			if(fromposition)
+			{
+				IssueCommand(s"position fen "+fen)
+			}
+			else
+			{
+				IssueCommand(s"position startpos")
+			}
 		}
 
 		if(protocol=="XBOARD")
@@ -383,8 +471,11 @@ case class GEngine(
 			IssueVariantXBOARD
 			IssueCommand(s"level $level")
 			IssueCommand("post")
-			IssueCommand("hard")
 			IssueCommand("force")
+			if(fromposition)
+			{
+				IssueCommand(s"setboard "+fen)
+			}
 		}
 	}
 
@@ -398,7 +489,8 @@ case class GEngine(
 		if(protocol=="UCI")
 		{
 			IssueCommand(s"position fen $fen")
-			IssueCommand(s"go wtime $wtime btime $btime winc $winc binc $binc movestogo $movestogo")
+			val issuemovestogo=if(movestogo!=0) s" movestogo $movestogo" else " movestogo 5"
+			IssueCommand(s"go wtime $wtime btime $btime winc $winc binc $binc"+issuemovestogo)
 		}
 
 		def IssueXBOARDStart
@@ -929,6 +1021,7 @@ case class GEngine(
 		var analyze:Boolean=true,
 		var colors:Boolean=true,
 		var done:Boolean=false,
+		var reuse:Boolean=true,
 		var myname:String=""
 	)
 	{
@@ -991,6 +1084,7 @@ case class GEngine(
 					if((feature=="setboard")&&(value=="1")) setboard=true
 					if((feature=="analyze")&&(value=="0")) analyze=false
 					if((feature=="colors")&&(value=="0")) colors=false
+					if((feature=="reuse")&&(value=="0")) reuse=false
 					if((feature=="done")&&(value=="1")) done=true
 
 					if(feature=="option")
@@ -1181,6 +1275,18 @@ case class GEngine(
 
 	var log=Log()
 
+	def UpdateXBOARDState(command:String)
+	{
+		if(command=="analyze")
+		{
+			xboardstate="Analyzing"
+		}
+		if(command=="force")
+		{
+			xboardstate="Observing"
+		}
+	}
+
 	def IssueCommand(command:String)
 	{
 		if(command==null) return
@@ -1189,6 +1295,7 @@ case class GEngine(
 		{
 			engineout.write(fullcommand.getBytes())
 			engineout.flush()
+			UpdateXBOARDState(command)
 			log.Add(LogItem(command,"in"))
 		}
 		catch
@@ -1515,6 +1622,16 @@ case class GEngine(
 		false
 	}
 
+	def XBOARDIssueExitOrForce
+	{
+		if(xboardstate=="Analyzing")
+		{
+			IssueCommand("exit")
+		} else {
+			IssueCommand("force")
+		}				
+	}
+
 	def Start(g:game)
 	{
 		if(engineprocess==null) return
@@ -1537,12 +1654,10 @@ case class GEngine(
 			if(autosetfen)
 			{
 				val infinitethinkingtime=24*60*1000
-				IssueCommand("exit")
-				IssueCommand("force")
+				XBOARDIssueExitOrForce
 				IssueCommand("new")
 				IssueCommand("force")
 				IssueCommand("post")
-				IssueCommand("hard")
 				IssueVariantXBOARD
 				IssueCommand("analyze")
 				for(truealgeb<-truealgebline)
@@ -1614,8 +1729,7 @@ case class GEngine(
 		}
 		if(protocol=="XBOARD")
 		{
-			IssueCommand("force")
-			IssueCommand("exit")
+			XBOARDIssueExitOrForce
 			try{Thread.sleep(200)}catch{case e:Throwable=>{}}
 			running=false
 		}

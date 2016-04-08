@@ -252,6 +252,21 @@ object Builder
 		null
 	}
 
+	def getcheck(id:String):MyCheckBox=
+	{
+		val comp=getcomp(id)
+		if((comp!=null)&&(comp.isInstanceOf[MyCheckBox])) return comp.asInstanceOf[MyCheckBox]
+		null
+	}
+
+	def setcheckgc(id:String,value:Boolean=false)
+	{
+		val cc=getcheck(id)
+		if(cc==null) return
+		cc.set_gui_value(StringData(""+value))
+		setcval_safe(id,""+value)
+	}
+
 	def setbuttontext(id:String, what:String)=
 	{
 		val comp=getcomp(id)
@@ -320,17 +335,18 @@ object Builder
 
 	def gi(path:String,default:Int):Int=
 	{
-		val d=getval(path)
-
 		Utils.parse[Int](gs(path,""),default)
+	}
+
+	def gci(path:String,default:Int):Int=
+	{
+		Utils.parse[Int](gs(cpath(path),""),default)
 	}
 
 	def gsi(path:String,default:Int=0):Int=gi(spath(path),default)
 
 	def gd(path:String,default:Double):Double=
 	{
-		val d=getval(path)
-
 		Utils.parse[Double](gs(path,""),default)
 	}
 
@@ -338,9 +354,12 @@ object Builder
 
 	def gb(path:String,default:Boolean):Boolean=
 	{
-		val d=getval(path)
-
 		Utils.parse[Boolean](gs(path,""),default)
+	}
+
+	def gcb(path:String,default:Boolean):Boolean=
+	{
+		Utils.parse[Boolean](gs(cpath(path),""),default)
 	}
 
 	def gsb(path:String,default:Boolean=false):Boolean=gb(spath(path),default)

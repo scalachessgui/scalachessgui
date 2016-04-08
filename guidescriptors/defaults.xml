@@ -126,5 +126,64 @@
 			<v key="selected">5</v>
 		</m>
 	</m>
+	
+	<m p="components#timecontrolincrementaltime">
+		<m>
+			<l key="items">
+				<v>1</v>
+				<v>2</v>
+				<v>3</v>
+				<v>4</v>
+				<v>5</v>
+				<v>6</v>
+				<v>7</v>
+				<v>8</v>
+				<v>9</v>
+				<v>10</v>
+				<v>15</v>
+				<v>20</v>
+				<v>25</v>
+				<v>30</v>
+				<v>35</v>
+				<v>40</v>
+				<v>45</v>
+				<v>50</v>
+				<v>75</v>
+				<v>100</v>
+			</l>
+			<v key="selected">2</v>
+		</m>
+	</m>
+	
+	<m p="components#timecontrolincrementalincrement">
+		<m>
+			<l key="items">
+				<v>1</v>
+				<v>2</v>
+				<v>3</v>
+				<v>4</v>
+				<v>5</v>
+				<v>6</v>
+				<v>7</v>
+				<v>8</v>
+				<v>9</v>
+				<v>10</v>
+				<v>15</v>
+				<v>20</v>
+				<v>25</v>
+				<v>30</v>
+				<v>60</v>
+				<v>120</v>
+				<v>180</v>
+				<v>240</v>
+				<v>300</v>
+			</l>
+			<v key="selected">3</v>
+		</m>
+	</m>
+	
+	<m p="components#timecontrolconventional">
+		<v>true</v>
+	</m>
 
 </patches>

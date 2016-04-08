@@ -1,8 +1,30 @@
-<vbox padding="5" gap="5">
-	<hbox padding="5" gap="5" width="400">
-		<label text="Number of moves"/>
-		<combo id="timecontrolnumberofmoves"/>
-		<label text="Time"/>
-		<combo id="timecontroltime"/>
-	</hbox>
+<vbox padding="10" gap="5">
+	<vbox padding="10" id="conventionaloutervbox">
+	<vbox id="conventionalvbox" padding="5" gap="5">
+		<hbox padding="5" gap="5">
+			<label text="Conventional clock"/>
+			<checkbox id="timecontrolconventional"/>
+		</hbox>
+		<hbox padding="5" gap="5" width="400">
+			<label text="Number of moves"/>
+			<combo id="timecontrolnumberofmoves"/>
+			<label text="Time ( minutes )"/>
+			<combo id="timecontroltime"/>
+		</hbox>
+	</vbox>
+	</vbox>
+	<vbox padding="10" id="incrementaloutervbox">
+	<vbox id="incrementalvbox" padding="5" gap="5">
+		<hbox padding="5" gap="5">
+			<label text="Incremental clock"/>
+			<checkbox id="timecontrolincremental"/>
+		</hbox>
+		<hbox padding="5" gap="5" width="400">
+			<label text="Time ( minutes )"/>
+			<combo id="timecontrolincrementaltime"/>
+			<label text="Increment ( seconds )"/>
+			<combo id="timecontrolincrementalincrement"/>			
+		</hbox>
+	</vbox>
+	</vbox>
 </vbox>

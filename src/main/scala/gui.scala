@@ -548,6 +548,31 @@ class GuiClass extends Application
 		engine.issue_command(command+"\n")
 	}
 
+	def StyleTimecontrols
+	{
+		val isconventional=Builder.gb("components#timecontrolconventional",true)
+		val borderstyle="-fx-border-style: solid; -fx-border-width: 1px; -fx-border-radius: 15px;"
+		val selectedstyle="-fx-background-color: #afffaf;"
+		val notselectedstyle="-fx-background-color: #afafaf;"
+
+		val conventionaloutervbox=Builder.getvboxn("conventionaloutervbox")
+		val conventionalvbox=Builder.getvboxn("conventionalvbox")
+		val incrementaloutervbox=Builder.getvboxn("incrementaloutervbox")
+		val incrementalvbox=Builder.getvboxn("incrementalvbox")
+
+		if(isconventional)
+		{
+			conventionalvbox.setStyle(selectedstyle)
+			incrementalvbox.setStyle(notselectedstyle)
+		} else {
+			conventionalvbox.setStyle(notselectedstyle)
+			incrementalvbox.setStyle(selectedstyle)
+		}
+
+		conventionaloutervbox.setStyle(borderstyle)
+		incrementaloutervbox.setStyle(borderstyle)
+	}
+
 	def handler(ev:MyEvent)
 	{
 		Builder.default_handler(ev)
@@ -562,6 +587,20 @@ class GuiClass extends Application
 		
 		if(ev.kind=="checkbox changed")
 		{
+			if(ev.id=="timecontrolconventional")
+			{
+				val cv=Builder.gcb("timecontrolconventional",true)
+				Builder.setcheckgc("timecontrolincremental",!cv)
+				StyleTimecontrols
+			}
+
+			if(ev.id=="timecontrolincremental")
+			{
+				val cv=Builder.gcb("timecontrolincremental",false)
+				Builder.setcheckgc("timecontrolconventional",!cv)
+				StyleTimecontrols
+			}
+
 			if(ev.id=="bookenabled")
 			{
 				commands.g.pos_changed
@@ -671,7 +710,16 @@ class GuiClass extends Application
 				if(!enginegames.gamerunning)
 				{
 					ResetGame
-					enginegames.StartGame
+					enginegames.StartGame(fromposition=false)
+					selecttab("Engine games")
+				}
+			}
+
+			if(ev.id=="startenginegamefromcurrentposition")
+			{
+				if(!enginegames.gamerunning)
+				{
+					enginegames.StartGame(fromposition=true)
 					selecttab("Engine games")
 				}
 			}
@@ -684,6 +732,7 @@ class GuiClass extends Application
 			if(ev.id=="enginegamestimecontrol")
 			{
 				Builder.MyStage("enginegamestimecontrol",modal=true,do_size=false,set_handler=handler,title="Engine games - time control")
+				StyleTimecontrols
 			}
 
 			if(ev.id=="recordrect")
