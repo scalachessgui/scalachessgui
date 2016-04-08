@@ -285,6 +285,10 @@ case class EngineGames(
 					}
 					else
 					{
+						if(isincremental)
+						{
+							onturn.time+=incrementpermove
+						}
 						if(turn=="white") turn="black" else turn="white"
 						onturn=players(turn)
 						Platform.runLater(new Runnable{def run{
@@ -307,11 +311,6 @@ case class EngineGames(
 								playerwhite.time+=incrementpermovestogo
 								playerblack.time+=incrementpermovestogo
 							}
-						}
-						if(isincremental)
-						{
-							playerwhite.time+=incrementpermove
-							playerblack.time+=incrementpermove
 						}
 					}
 				}
