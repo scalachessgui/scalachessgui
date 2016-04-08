@@ -138,6 +138,10 @@ class game
 			{
 				return GameResult(0,"1/2-1/2","draw by threefold repetition")
 			}
+			if(b.halfmove_clock>=100)
+			{
+				return GameResult(0,"1/2-1/2","draw by the fifty move rule")
+			}
 			return null
 		} else if(b.isInCheck) {
 			if(b.turn==WHITE)
