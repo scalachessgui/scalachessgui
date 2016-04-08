@@ -432,7 +432,7 @@ case class GEngine(
 	{
 		if(protocol=="XBOARD")
 		{
-			if(features.reuse)
+			if(!features.reuse)
 			{
 				Reload
 			}
