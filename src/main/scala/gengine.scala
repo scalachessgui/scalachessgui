@@ -421,10 +421,11 @@ case class EngineGames(
 				else
 				{
 					val thinkingtime=currentmovesteps*timestep
+					currentmovesteps=0
 					val extremepv=onturn.ExtremePv(lowest=false)
 					val scorenumerical=extremepv.scorenumerical
 					val signedscorenumerical=extremepv.signedscorenumerical
-					val movetimeformatted=formatDuration(thinkingtime,"mm:ss")
+					val movetimeformatted=formatDuration(thinkingtime,"mm:ss")+"."+(thinkingtime%1000)/100
 					val historyitem=GameHistoryItem(eval=scorenumerical,movetime=thinkingtime,movetimeformatted=movetimeformatted)
 					gamehistory.Add(historyitem)
 					bestmove=onturn.bestmove
