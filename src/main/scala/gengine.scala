@@ -31,6 +31,9 @@ import piece._
 import collection.JavaConverters._
 
 import org.apache.commons.lang.time.DurationFormatUtils.formatDuration
+import org.apache.commons.lang.time.DateFormatUtils._
+
+import java.util.Date
 
 ////////////////////////////////////////////////////////////////////
 
@@ -317,6 +320,8 @@ case class EngineGames(
 
 	var gameresult:GameResult=null
 
+	var gamestartfen:String=""
+
 	var initturn:String="white"
 
 	def StartGame(fromposition:Boolean=false)
@@ -337,6 +342,31 @@ case class EngineGames(
 			Update("Game starting position is final. Game could not be started.")
 			return
 		}
+
+		// remove any movelist, start from fen
+		gamestartfen=commands.g.report_fen
+		commands.g.set_from_fen(gamestartfen)
+
+		commands.g.pgn_headers=Map[String,String]()
+
+		commands.g.pgn_headers+=("Event"->"Computer chess game")
+		commands.g.pgn_headers+=("Site"->"Scalachessgui")
+
+		val date=new Date()
+
+		val datef=format(date,"yyyy-MM-dd")
+		val timef=format(date,"HH:mm:ss")
+
+		commands.g.pgn_headers+=("Date"->datef)
+		commands.g.pgn_headers+=("Time"->timef)
+
+		commands.g.pgn_headers+=("White"->playerwhite.GetDisplayName)
+		commands.g.pgn_headers+=("Black"->playerblack.GetDisplayName)
+
+		GetTimeControl
+
+		commands.g.pgn_headers+=("Timecontrol"->timecontrolverbal)
+
 		gamethread=new Thread(new Runnable{def run{
 			gamerunning=true
 			var cnt=0
@@ -344,7 +374,6 @@ case class EngineGames(
 			bestmove=null
 			var issuego=true
 			DisableBoardControls()
-			GetTimeControl
 			if(commands.g.b.getturn==piece.BLACK) turn="black"
 			playerwhite.SetMultipv(1,commands.g)
 			playerblack.SetMultipv(1,commands.g)
@@ -394,13 +423,15 @@ case class EngineGames(
 					val thinkingtime=currentmovesteps*timestep
 					val extremepv=onturn.ExtremePv(lowest=false)
 					val scorenumerical=extremepv.scorenumerical
+					val signedscorenumerical=extremepv.signedscorenumerical
 					val movetimeformatted=formatDuration(thinkingtime,"mm:ss")
 					val historyitem=GameHistoryItem(eval=scorenumerical,movetime=thinkingtime,movetimeformatted=movetimeformatted)
 					gamehistory.Add(historyitem)
 					bestmove=onturn.bestmove
 					val true_algeb=commands.g.b.to_true_algeb(bestmove)
 					val m=move(fromalgeb=true_algeb)
-					commands.g.makeMove(m)
+					var comment=s"$movetimeformatted; $signedscorenumerical"
+					commands.g.makeMove(m,addcomment=comment)
 					gameresult=commands.g.report_result
 
 					if(gameresult!=null)
@@ -2112,6 +2143,7 @@ case class GEngine(
 					hasdepth=true
 
 					scorenumerical=ParseInt(parts(1),depth)
+					signedscorenumerical=if(scorenumerical>0) "+"+scorenumerical else ""+scorenumerical
 					scoreverbal=if(scorenumerical>0) "+"+scorenumerical else ""+scorenumerical
 					hasscore=true
 

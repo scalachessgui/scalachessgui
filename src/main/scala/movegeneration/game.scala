@@ -38,7 +38,8 @@ case class gameNode(
 	turn:Char=' ',
 	num_checks:Map[TColor,Int]=Map(WHITE->0,BLACK->0),
 	genAlgeb:String="",
-	genTrueAlgeb:String=""
+	genTrueAlgeb:String="",
+	comment:String=""
 	)
 {
 
@@ -46,6 +47,12 @@ case class gameNode(
 	var childs=Map[String,gameNode]()
 
 	def sortedSans:List[String]=childs.keys.toList.sortWith(childs(_).genPriority < childs(_).genPriority)
+
+	def commented_san:String=
+	{
+		if(comment=="") return genSan
+		s"$genSan {$comment}"
+	}
 
 	def get_move_no:String=
 	{
@@ -381,16 +388,16 @@ class game
 		}
 	}
 
-	def makeSanMove(san:String)
+	def makeSanMove(san:String,addcomment:String="")
 	{
 		val m=b.sanToMove(san)
 		if(m!=null)
 		{
-			makeMove(m)
+			makeMove(m,addcomment)
 		}
 	}
 
-	def makeMove(m:move)
+	def makeMove(m:move,addcomment:String="")
 	{
 
 		if(BUILDING)
@@ -420,7 +427,8 @@ class game
 						turn=colorLetterOf(b.turn),
 						num_checks=Map(WHITE->b.num_checks(WHITE),BLACK->b.num_checks(BLACK)),
 						genAlgeb=algeb,
-						genTrueAlgeb=b.to_true_algeb(algeb)
+						genTrueAlgeb=b.to_true_algeb(algeb),
+						comment=addcomment
 					)
 				current_node.childs+=(san->newNode)
 				current_node=newNode
@@ -525,7 +533,9 @@ class game
 					pgn+=move_no
 				}
 
-				val addsan=child.genSan
+				//val addsan=child.genSan
+
+				val addsan=child.commented_san
 
 				pgn+=" "+addsan+" "
 
@@ -581,7 +591,7 @@ class game
 		pgn_headers+=("FEN"->root.fen)
 		pgn_headers+=("Variant"->getvariant)
 
-		report_headers=(for((k,v)<-pgn_headers) yield s"""[$k "$v"]""").mkString("\n")
+		report_headers=(for(k<-SortedPgnHeaderKeys) yield { val v=pgn_headers(k); s"""[$k "$v"]""" } ).mkString("\n")
 
 		replen=report_headers.length+2
 
@@ -674,7 +684,9 @@ class game
 					""".stripMargin
 				}
 
-				val addsan=child.genSan
+				//val addsan=child.genSan
+
+				val addsan=child.commented_san
 
 				val addlen=addsan.length
 
@@ -739,6 +751,23 @@ class game
 		pgn
 	}
 
+	val PreferredPgnHeaders:List[String]=List("Event","Site","Date","Time","Timecontrol","Variant","FEN","White","Black")
+
+	def PgnHeaderSortFunc(a:String,b:String):Boolean=
+	{
+		val ai=PreferredPgnHeaders.indexOf(a)
+		val bi=PreferredPgnHeaders.indexOf(b)
+		if((ai< 0)&&(bi< 0)) return false
+		if(ai< 0) return false
+		if(bi< 0) return true
+		ai< bi
+	}
+
+	def SortedPgnHeaderKeys:List[String]=
+	{
+		pgn_headers.keys.toList.sortWith(PgnHeaderSortFunc)
+	}
+
 	var report_headers_html=""
 
 	def report_pgn_html(cn:gameNode):String=
@@ -746,8 +775,9 @@ class game
 		pgn_headers+=("FEN"->root.fen)
 		pgn_headers+=("Variant"->getvariant)
 
-		report_headers_html=(for((k,v)<-pgn_headers) yield 
+		report_headers_html=(for(k<-SortedPgnHeaderKeys) yield 
 		{
+			val v=pgn_headers(k)
 			s"""
 				|<tr onmousedown="x='edit'; field='$k';">
 				|<td><font color="#7f0000">$k</font></td>
