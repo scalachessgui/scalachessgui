@@ -122,8 +122,9 @@ class game
 
 	def report_result:GameResult=
 	{
-		b.genMoveList
-		val haslegal=(b.move_list.length>0)
+		val bclone=b.cclone
+		bclone.initMoveGen
+		val haslegal=bclone.nextLegalMove
 		if(haslegal)
 		{
 			var fen_cnt=1
@@ -138,22 +139,22 @@ class game
 			{
 				return GameResult(0,"1/2-1/2","draw by threefold repetition")
 			}
-			if(b.halfmove_clock>=100)
+			if(bclone.halfmove_clock>=100)
 			{
 				return GameResult(0,"1/2-1/2","draw by the fifty move rule")
 			}
 			return null
-		} else if(b.isInCheck) {
-			if(b.turn==WHITE)
+		} else if(bclone.isInCheck) {
+			if(bclone.turn==WHITE)
 			{
-				if(b.whereIsKing(WHITE)!=square.NO_SQUARE)
+				if(bclone.whereIsKing(WHITE)!=square.NO_SQUARE)
 				{
 					return GameResult(-1,"0-1","white checkmated")
 				} else {
 					return GameResult(-1,"0-1","white king destroyed")
 				}
 			} else {
-				if(b.whereIsKing(BLACK)!=square.NO_SQUARE)
+				if(bclone.whereIsKing(BLACK)!=square.NO_SQUARE)
 				{
 					return GameResult(1,"1-0","black checkmated")
 				} else {

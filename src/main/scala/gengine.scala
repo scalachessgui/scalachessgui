@@ -353,22 +353,28 @@ case class EngineGames(
 			playerblack.NewGame(level,fromposition,fen)
 			initturn=turn
 			var onturn=players(turn)
+
 			Platform.runLater(new Runnable{def run{
 				playerwhite.OpenConsole
 				playerblack.OpenConsole
 				onturn.ToTop
 			}})
+
 			gamehistory=GameHistory()
 			gameresult=null
 			var stepcnt=0
 			var currentmovesteps=0
+
 			StartThinking(onturn,turn,true)
+
 			while((!Thread.currentThread.isInterrupted())&&(!interrupted)&&(gameresult==null))
 			{
+
 				if((stepcnt%10)==0)
 				{
 					Update(UpdateGameStatus)
 				}
+
 				if(onturn.thinking)
 				{
 					onturn.time-=timestep
@@ -395,10 +401,8 @@ case class EngineGames(
 					val true_algeb=commands.g.b.to_true_algeb(bestmove)
 					val m=move(fromalgeb=true_algeb)
 					commands.g.makeMove(m)
-					Platform.runLater(new Runnable{def run{
-						GuiUpdate()
-					}})
 					gameresult=commands.g.report_result
+
 					if(gameresult!=null)
 					{
 
@@ -409,13 +413,18 @@ case class EngineGames(
 						{
 							onturn.time+=incrementpermove
 						}
+
 						if(turn=="white") turn="black" else turn="white"
 						onturn=players(turn)
+
 						Platform.runLater(new Runnable{def run{
 							onturn.ToTop
 						}})			
+
 						StartThinking(onturn,turn,issuego)
+
 						issuego=false
+
 						if(turn==initturn)
 						{
 							if(isconventional)
@@ -423,6 +432,7 @@ case class EngineGames(
 								movestogo-=1
 							}
 						}
+						
 						if(isconventional)
 						{
 							if(movestogo==0)
@@ -433,7 +443,12 @@ case class EngineGames(
 							}
 						}
 					}
+
+					Platform.runLater(new Runnable{def run{
+						GuiUpdate()
+					}})
 				}
+
 				if(gameresult==null)
 				{
 					try{Thread.sleep(timestep)}catch{case e:Throwable=>{interrupted=true}}
