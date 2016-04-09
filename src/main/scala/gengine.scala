@@ -26,6 +26,7 @@ import settings._
 import game._
 import commands._
 import move._
+import piece._
 
 import collection.JavaConverters._
 
@@ -43,6 +44,87 @@ case class EngineGames(
 	var gamerunning=false
 
 	var gamethread:Thread=null
+
+	case class GameHistoryItem(
+		var eval:Int=0,
+		var movetime:Int=0,
+		var movetimeformatted:String=""
+	)
+	{
+
+	}
+
+	case class GameHistory(
+		var items:List[GameHistoryItem]=List[GameHistoryItem]()
+	)
+	{
+		def Add(item:GameHistoryItem)
+		{
+			items=items:+item
+		}
+
+		def ChartSvg:String=
+		{	
+			val WIDTH=400
+			val HEIGHT=200
+			var len=items.length
+			var barwidth=32
+			while(((barwidth*len)>WIDTH)&&(barwidth>2))
+			{
+				barwidth=barwidth/2
+			}
+			var first=true
+			var maxeval:Int=0
+			var mineval:Int=0
+			for(item<-items)
+			{
+				val eval=item.eval
+				if(first)
+				{
+					maxeval=eval
+					mineval=eval
+					first=false
+				} else {
+					if(eval> maxeval) maxeval=eval
+					if(eval< mineval) mineval=eval
+				}
+			}
+			var range=500
+			if(maxeval>range) range=maxeval
+			if((-mineval)>range) range= -mineval
+			if(range< 500) range=500
+			else if(range< 1000) range=1000
+			else if(range< 2000) range=2000
+			else if(range< 5000) range=5000
+			var i=0
+			var svgbars=List[String]()
+			for(item<-items)
+			{
+				val cx=i*barwidth
+				var height=(item.eval*HEIGHT)/(2*range)
+				var cy=HEIGHT/2-height
+				if(height< 0)
+				{
+					height= -height
+					cy=HEIGHT/2
+				}
+				if(height==0) height=1
+				val shift=if(initturn=="white") 0 else 1
+				val color=if(((i+shift)%2)==0) WHITE_COLOR_BACKGROUND else BLACK_COLOR_BACKGROUND
+				val svgbar=s"""
+					|<rect width="$barwidth" x="$cx" y="$cy" height="$height" style="fill:$color;stroke-width:1;stroke:#000000;"/>
+				""".stripMargin
+				svgbars=svgbars:+svgbar
+				i+=1
+			}
+			val svgbarscontent=svgbars.mkString("")
+			s"""
+				|<svg width="$WIDTH" height="$HEIGHT">
+				|$svgbarscontent
+				|</svg>
+			""".stripMargin
+		}
+	}
 
 	def Update(content:String)
 	{
@@ -167,47 +249,75 @@ case class EngineGames(
 		engine.StartThinking
 	}
 
+	val WHITE_COLOR_BACKGROUND="#afffaf"
+	val WHITE_COLOR="#007f00"
+	val BLACK_COLOR_BACKGROUND="#ffafaf"
+	val BLACK_COLOR="#7f0000"
+
 	def UpdateGameStatus:String=
 	{
 		val wtime=formatDuration(playerwhite.time,"HH:mm:ss")
 		val btime=formatDuration(playerblack.time,"HH:mm:ss")
-		val whitecolor="#00af00"
-		val blackcolor="#af0000"
 		val timestyle="font-size:36px; font-family: monospace; font-weight: bold; padding: 3px; border-style: solid; border-width: 2px; border-color: #000000; border-radius: 10px;"
-		var whitebckg=if(turn=="white") "#afffaf" else "#afafaf"
-		var blackbckg=if(turn=="black") "#afffaf" else "#afafaf"
-		val sidespan=s"""<span style="padding: 5px; border-style: solid; border-width: 2px; border-color: #000000; border-radius: 10px; font-size: 20px;">"""
+		var whitebckg=if(turn=="white") WHITE_COLOR_BACKGROUND else "#afafaf"
+		var blackbckg=if(turn=="black") BLACK_COLOR_BACKGROUND else "#afafaf"
+		val sidespanstyle="padding: 5px; border-style: solid; border-width: 2px; border-radius: 10px; font-size: 20px;"
+		val sidespanwhite=s"""<span style="$sidespanstyle border-color: $WHITE_COLOR;">"""
+		val sidespanblack=s"""<span style="$sidespanstyle border-color: $BLACK_COLOR;">"""
 		val namew=playerwhite.GetDisplayName
 		val nameb=playerblack.GetDisplayName
-		val namestyle="font-size: 20px; color: #0000ff;"
+		val namestyle="font-size: 20px; color: #0000ff; padding: 5px; border-style: dotted; border widht: 2px; border-radius: 10px;"
 		val timecontrolcolor="#0000af"
 		val timecontrolinfo=if(isconventional) s"<i><font size=5><b>$movestogo</b></font> move(s) to go</i>" else ""
+		val chartsvg=gamehistory.ChartSvg
+		var startgamebuttons=if(gamerunning) s"""
+			|<td><input type="button" value="Abort game" onclick="command='abort';"></td>
+		""".stripMargin else
 		s"""
+			|<td><input type="button" value="Start game" onclick="command='start';"></td>
+			|<td><input type="button" value="Start game from current position" onclick="command='startfrompos';"></td>
+		""".stripMargin
+		s"""
+			|<script>
+			|var command='';
+			|</script>
 			|<table cellpadding="3" cellspacing="3">
 			|<tr>
-			|<td>$sidespan<font color="$whitecolor">White</font></span></td>
+			|<td>$sidespanwhite<font color="$WHITE_COLOR">White</font></span></td>
 			|<td><span style="$timestyle background-color: $whitebckg;">$wtime</span></td>
-			|<td>$sidespan<font color="$blackcolor">Black</font></span></td>
+			|<td>$sidespanblack<font color="$BLACK_COLOR">Black</font></span></td>
 			|<td><span style="$timestyle background-color: $blackbckg">$btime</span></td>
 			|<td><font color="$timecontrolcolor">$timecontrolinfo</td>
 			|</tr>
 			|</table>
 			|<table cellpadding="3" cellspacing="3">
 			|<tr>
-			|<td>White</td>
-			|<td style="$namestyle"><font color="$whitecolor">$namew</font></td>
+			|<td style="color: $WHITE_COLOR;">White</td>
+			|<td style="$namestyle border-color: $WHITE_COLOR"><font color="$WHITE_COLOR"><b>$namew</b></font></td>
 			|</tr>
 			|<tr>
-			|<td>Black</td>
-			|<td style="$namestyle"><font color="$blackcolor">$nameb</font></td>
+			|<td style="color: $BLACK_COLOR;">Black</td>
+			|<td style="$namestyle border-color: $BLACK_COLOR"><font color="$BLACK_COLOR"><b>$nameb</b></font></td>
 			|</tr>
 			|<tr>
-			|<td>Time control</td>
+			|<td style="color: $timecontrolcolor;">Time control</td>
 			|<td style="color: $timecontrolcolor; font-size: 18px; font-weight: bold;" colspan="3"><i>$timecontrolverbal</i></td>
 			|</tr>
 			|</table>
+			|<table cellpadding="3" cellspacing="3">
+			|<tr>
+			|$startgamebuttons
+			|</tr>
+			|</table>
+			|$chartsvg
 		""".stripMargin
 	}
+
+	var gamehistory=GameHistory()
+
+	var gameresult:GameResult=null
+
+	var initturn:String="white"
 
 	def StartGame(fromposition:Boolean=false)
 	{
@@ -235,30 +345,34 @@ case class EngineGames(
 			var issuego=true
 			DisableBoardControls()
 			GetTimeControl
+			if(commands.g.b.getturn==piece.BLACK) turn="black"
 			playerwhite.SetMultipv(1,commands.g)
 			playerblack.SetMultipv(1,commands.g)
 			val fen=commands.g.report_fen
 			playerwhite.NewGame(level,fromposition,fen)
 			playerblack.NewGame(level,fromposition,fen)
-			val initturn=turn
+			initturn=turn
 			var onturn=players(turn)
 			Platform.runLater(new Runnable{def run{
 				playerwhite.OpenConsole
 				playerblack.OpenConsole
 				onturn.ToTop
 			}})
-			StartThinking(onturn,turn,true)
+			gamehistory=GameHistory()
+			gameresult=null
 			var stepcnt=0
-			var gameresult:GameResult=null
+			var currentmovesteps=0
+			StartThinking(onturn,turn,true)
 			while((!Thread.currentThread.isInterrupted())&&(!interrupted)&&(gameresult==null))
 			{
-				if((stepcnt%5)==0)
+				if((stepcnt%10)==0)
 				{
 					Update(UpdateGameStatus)
 				}
 				if(onturn.thinking)
 				{
 					onturn.time-=timestep
+					currentmovesteps+=1
 					if(onturn.time<=0)
 					{
 						if(turn=="white")
@@ -271,6 +385,12 @@ case class EngineGames(
 				}
 				else
 				{
+					val thinkingtime=currentmovesteps*timestep
+					val extremepv=onturn.ExtremePv(lowest=false)
+					val scorenumerical=extremepv.scorenumerical
+					val movetimeformatted=formatDuration(thinkingtime,"mm:ss")
+					val historyitem=GameHistoryItem(eval=scorenumerical,movetime=thinkingtime,movetimeformatted=movetimeformatted)
+					gamehistory.Add(historyitem)
 					bestmove=onturn.bestmove
 					val true_algeb=commands.g.b.to_true_algeb(bestmove)
 					val m=move(fromalgeb=true_algeb)
@@ -326,6 +446,7 @@ case class EngineGames(
 				playerwhite.Reuse
 				playerblack.Reuse
 			}})
+			gamerunning=false
 			if(gameresult==null)
 			{
 				Update(UpdateGameStatus+"<br>Game aborted.")
@@ -334,7 +455,6 @@ case class EngineGames(
 				Update(UpdateGameStatus+s"<br>Game finished. Result: $resultverbal")
 			}
 			EnableBoardControls()
-			gamerunning=false
 		}})
 
 		gamethread.start()
@@ -406,6 +526,11 @@ case class GEngine(
 	var fen=""
 
 	def Loaded:Boolean=(engineprocess!=null)
+
+	def ExtremePv(lowest:Boolean=true):PvItem=
+	{
+		thinkingoutput.ExtremePv(lowest)
+	}
 
 	def CanSetboard:Boolean=
 	{
@@ -2051,6 +2176,24 @@ case class GEngine(
 		var maxmultipv=1
 		var pvitems=Map[Int,PvItem]()
 
+		def SortedMultipvs:List[Int]=pvitems.keys.toList.sorted
+
+		def ExtremePv(lowest:Boolean=true):PvItem=
+		{
+			val sortedmultipvs=SortedMultipvs
+			if(sortedmultipvs.length>0)
+			{
+				if(lowest)
+				{
+					return pvitems(sortedmultipvs(0))
+				} else {
+					return pvitems(sortedmultipvs(sortedmultipvs.length-1))
+				}
+			} else {
+				return PvItem()
+			}
+		}
+
 		def ParseLine(line:String)
 		{
 			val pvitem=PvItem().ParseLine(line)
@@ -2066,21 +2209,22 @@ case class GEngine(
 
 		def ReportHTML:String=
 		{
-			val multipvs=pvitems.keys.toList.sorted
+			val multipvs=SortedMultipvs
 			val multipvscontent=(for(multipv<-multipvs) yield pvitems(multipv).ReportHTMLTableRow).mkString("\n")
 			s"""
-				|<table cellpadding=3 cellspacing=3>
 				|<tr>
-				|<td>Move</td>
-				|<td>Score</td>
-				|<td>Depth</td>
-				|<td>Time</td>
-				|<td>Nodes</td>
-				|<td>Nps</td>
+				|<td width="50">Move</td>
+				|<td width="50">Score</td>
+				|<td width="50">Depth</td>
+				|<td width="50">Time</td>
+				|<td width="80">Nodes</td>
+				|<td width="80">Nps</td>
 				|<td>Pv</td>
 				|</tr>
 				|$multipvscontent
-				|</table>
+				|<tr>
+				|<td colspan="7"><hr></td>
+				|</tr>
 			""".stripMargin
 		}
 	}
@@ -2111,12 +2255,33 @@ case class GEngine(
 			}})
 		}
 
+		def SortedDepths:List[Int]=depthitems.keys.toList.sorted.reverse
+
+		def HighestDepthItem:DepthItem=
+		{
+			val sorteddepths=SortedDepths
+			if(sorteddepths.length>0)
+			{
+				val highestdepth=sorteddepths(0)
+				depthitems(highestdepth)
+			} else {
+				DepthItem()
+			}
+		}
+
+		def ExtremePv(lowest:Boolean=true):PvItem=
+		{
+			HighestDepthItem.ExtremePv(lowest)
+		}
+
 		def ReportHTML:String=
 		{
-			val depths=depthitems.keys.toList.sorted.reverse
-			val depthscontent=(for(depth<-depths) yield depthitems(depth).ReportHTML).mkString("<hr>")
+			val depths=SortedDepths
+			val depthscontent=(for(depth<-depths) yield depthitems(depth).ReportHTML).mkString("\n")
 			s"""
+				|<table cellpadding="3" cellspacing="3">
 				|$depthscontent
+				|<table>
 			""".stripMargin
 		}
 	}

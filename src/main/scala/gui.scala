@@ -632,6 +632,25 @@ class GuiClass extends Application
 		if(ev.kind=="webview clicked")
 		{
 
+			if(ev.id=="enginegamestext")
+			{
+				val we=Builder.getwebe("enginegamestext")
+				val command=we.executeScript("command").toString()
+				if(command=="abort")
+				{
+					enginegames.AbortGame
+				}
+				if(command=="start")
+				{
+					ResetGame
+					enginegames.StartGame(fromposition=false)
+				}
+				if(command=="startfrompos")
+				{
+					enginegames.StartGame(fromposition=true)
+				}
+			}
+
 			if(ev.id=="enginestext")
 			{
 				enginesclicked

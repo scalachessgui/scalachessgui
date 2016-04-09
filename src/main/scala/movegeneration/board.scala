@@ -1141,81 +1141,90 @@ class board
 
 				val to=m.to
 
-				val from_piece=rep(currentSq)
-
-				val to_piece=rep(to)
-
-				val to_piece_color=colorOf(to_piece)
-
-				if(colorOf(from_piece)==turn)
+				if(to!=NO_SQUARE)
 				{
-					if(to_piece==NO_PIECE)
+
+					val from_piece=rep(currentSq)
+
+					val to_piece=rep(to)
+
+					val to_piece_color=colorOf(to_piece)
+
+					if(colorOf(from_piece)==turn)
 					{
-
-						// take care of ep capture
-						var set_ep_capture=false
-						if(m.pawn_capture)
+						if(to_piece==NO_PIECE)
 						{
-							if(to==ep_square)
+
+							// take care of ep capture
+							var set_ep_capture=false
+							if(m.pawn_capture)
 							{
-								set_ep_capture=true
+								if(to==ep_square)
+								{
+									set_ep_capture=true
+								}
 							}
-						}
-						m.ep_capture=set_ep_capture
+							m.ep_capture=set_ep_capture
 
-						// empty square
-						// only allowed if not pawn capture or ep capture
-						if((!m.pawn_capture)||m.ep_capture)
-						{
-							// pawn double push only possible if passing square empty
-							if(
-								(!m.pawn_double_push)
-								||
-								(m.pawn_double_push&&(rep(m.pawn_passing_square)==NO_PIECE))
-								)
+							// empty square
+							// only allowed if not pawn capture or ep capture
+							if((!m.pawn_capture)||m.ep_capture)
 							{
-								current_move=m
-								currentPtr+=1
-								return true
+								// pawn double push only possible if passing square empty
+								if(
+									(!m.pawn_double_push)
+									||
+									(m.pawn_double_push&&(rep(m.pawn_passing_square)==NO_PIECE))
+									)
+								{
+									current_move=m
+									currentPtr+=1
+									return true
+								}
+								else
+								{
+									currentPtr+=1
+								}
 							}
 							else
 							{
 								currentPtr+=1
 							}
 						}
+						else if(to_piece_color==turn)
+						{
+							// bumps into own piece
+							currentPtr=m.next_vector
+						}
 						else
 						{
-							currentPtr+=1
-						}
-					}
-					else if(to_piece_color==turn)
-					{
-						// bumps into own piece
-						currentPtr=m.next_vector
-					}
-					else
-					{
-						m.capture=true
-						// capture
-						// but pawn cannot capture forward
-						if(!m.pawn_push)
-						{
-							current_move=m
-							// in case of promotion don't go to next vector
-							if(m.pawn_capture)
+							m.capture=true
+							// capture
+							// but pawn cannot capture forward
+							if(!m.pawn_push)
 							{
-								currentPtr+=1
+								current_move=m
+								// in case of promotion don't go to next vector
+								if(m.pawn_capture)
+								{
+									currentPtr+=1
+								}
+								else
+								{
+									currentPtr=m.next_vector
+								}
+								return true
 							}
 							else
 							{
 								currentPtr=m.next_vector
 							}
-							return true
 						}
-						else
-						{
-							currentPtr=m.next_vector
-						}
+
+					}
+					else
+					{
+						piece_done=true
 					}
 				}
 				else
