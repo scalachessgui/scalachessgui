@@ -127,6 +127,22 @@ class game
 		trunc_fen
 	}
 
+	def GetOpening:String=
+	{
+		if(root.childs.keys.toList.length<=0) return "*"
+		val dummy=new game
+		dummy.set_from_fen(root.fen)
+		var ptr=root
+		var cnt=0
+		while((ptr.childs.keys.toList.length>0)&&(cnt< 3))
+		{
+			ptr=ptr.childs(ptr.sortedSans(0))
+			dummy.makeSanMove(ptr.genSan)
+			cnt+=1
+		}
+		dummy.current_line_pgn
+	}
+
 	def report_result:GameResult=
 	{
 		val bclone=b.cclone
@@ -144,11 +160,11 @@ class game
 			}
 			if(fen_cnt>=3)
 			{
-				return GameResult(0,"1/2-1/2","draw by threefold repetition")
+				return GameResult(0,"1/2-1/2","GUI adjudication: draw by threefold repetition")
 			}
 			if(bclone.halfmove_clock>=100)
 			{
-				return GameResult(0,"1/2-1/2","draw by the fifty move rule")
+				return GameResult(0,"1/2-1/2","GUI adjudication: draw by the fifty move rule")
 			}
 			return null
 		} else if(bclone.isInCheck) {
@@ -156,20 +172,20 @@ class game
 			{
 				if(bclone.whereIsKing(WHITE)!=square.NO_SQUARE)
 				{
-					return GameResult(-1,"0-1","white checkmated")
+					return GameResult(-1,"0-1","GUI adjudication: white checkmated")
 				} else {
-					return GameResult(-1,"0-1","white king destroyed")
+					return GameResult(-1,"0-1","GUI adjudication: white king destroyed")
 				}
 			} else {
 				if(bclone.whereIsKing(BLACK)!=square.NO_SQUARE)
 				{
-					return GameResult(1,"1-0","black checkmated")
+					return GameResult(1,"1-0","GUI adjudication: black checkmated")
 				} else {
-					return GameResult(1,"1-0","black king destroyed")
+					return GameResult(1,"1-0","GUI adjudication: black king destroyed")
 				}
 			}
 		} else {
-			return GameResult(0,"1/2-1/2","stalemate")
+			return GameResult(0,"1/2-1/2","GUI adjudication: stalemate")
 		}
 	}
 
@@ -502,6 +518,20 @@ class game
 		tree
 	}
 
+	def GetTermination:String=
+	{
+		var term=""
+		if(pgn_headers.contains("Result"))
+		{
+			term+=" "+pgn_headers("Result")
+		}
+		if(pgn_headers.contains("Termination"))
+		{
+			term+=" {"+pgn_headers("Termination")+"}"
+		}
+		term
+	}
+
 	def report_pgn_move_list:String=
 	{
 
@@ -574,6 +604,14 @@ class game
 
 		}
 
+		val dummy=new board
+		dummy.set_from_fen(root.fen)
+
+		if(dummy.getturn==BLACK)
+		{
+			pgn+=dummy.fullmove_number+". ... "
+		}
+
 		report_pgn_recursive(root,false)
 
 		pgn=pgn.replaceAll(" +"," ")
@@ -597,7 +635,7 @@ class game
 
 		val move_list=report_pgn_move_list
 
-		List(report_headers,move_list).mkString("\n\n")
+		List(report_headers,move_list).mkString("\n\n")+GetTermination
 	}
 
 	def report_pgn_tree:String=
@@ -639,7 +677,18 @@ class game
 
 		}
 
-		report_pgn_recursive(root,false,List[String]())
+		val dummy=new board
+		dummy.set_from_fen(root.fen)
+
+		var line=List[String]()
+
+		if(dummy.getturn==BLACK)
+		{
+			val fmn=dummy.fullmove_number
+			line=line:+s"$fmn. ... "
+		}
+
+		report_pgn_recursive(root,false,line)
 
 		pgn
 	}
@@ -743,6 +792,17 @@ class game
 
 		}
 
+		val dummy=new board
+		dummy.set_from_fen(root.fen)
+
+		if(dummy.getturn==BLACK)
+		{
+			val fmn=dummy.fullmove_number
+			pgn+=s"""
+				|<font color="#0000ff">$fmn. ...</font> 
+			""".stripMargin
+		}
+
 		report_pgn_recursive(root,false)
 
 		pgn=pgn.replaceAll(" +"," ")
@@ -751,7 +811,8 @@ class game
 		pgn
 	}
 
-	val PreferredPgnHeaders:List[String]=List("Event","Site","Date","Time","Timecontrol","Variant","FEN","White","Black")
+	val PreferredPgnHeaders:List[String]=List("Event","Site","Date","Round","White","Black","Result","TimeControl",
+		"Time","Variant","FEN","Termination","Annotator","Opening","ECO")
 
 	def PgnHeaderSortFunc(a:String,b:String):Boolean=
 	{
@@ -788,6 +849,8 @@ class game
 
 		val move_list_html=report_pgn_move_list_html(cn)
 
+		val term=GetTermination
+
 		s"""
 			|<script>
 			|var x="";
@@ -799,6 +862,7 @@ class game
 			|</table>
 			|<br>
 			|$move_list_html
+			|$term
 			|</div>
 		""".stripMargin
 	}

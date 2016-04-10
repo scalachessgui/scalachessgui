@@ -122,11 +122,23 @@ case class EngineGames(
 			}
 			val svgbarscontent=svgbars.mkString("")
 			s"""
+				|<div style="margin-left: 15px;">
 				|<svg width="$WIDTH" height="$HEIGHT">
 				|$svgbarscontent
 				|</svg>
+				|</div>
 			""".stripMargin
 		}
+	}
+
+	def FormatResult(result:String,reason:String="",bcolor:String="#00ff00"):String=
+	{
+		s"""
+			|<div style="font-weight: bold; margin-top: 10px; padding: 15px; border-radius: 3px; border-style: solid; border-width: 1px; background-color: $bcolor;">
+			|<font size="5">$result</font>
+			|<font size="4">$reason</font>
+			|</span>
+		""".stripMargin
 	}
 
 	def Update(content:String)
@@ -164,12 +176,15 @@ case class EngineGames(
 	var isincremental=false
 	var initialtime=300000
 	var initialtimemin=5
+	var initialtimesec=300
 	var movestogoperround=40
 	var incrementpermove=0
 	var incrementpermovesec=0
 	var incrementpermovestogo=300000
 	var incrementpermovestogomin=5
+	var incrementpermovestogosec=300
 	var timecontrolverbal=""
+	var timecontrolverbalpgn=""
 	var movestogo=40
 	var level="40 5 0"
 	var turn="white"
@@ -193,6 +208,8 @@ case class EngineGames(
 
 		initialtimemin=Builder.gci("timecontroltime#selected",5)
 
+		initialtimesec=initialtimemin*60
+
 		incrementpermovesec=0
 
 		if(isincremental)
@@ -206,6 +223,7 @@ case class EngineGames(
 		initialtime=initialtimemin*60*1000
 
 		incrementpermovestogomin=initialtimemin
+		incrementpermovestogosec=initialtimemin*60
 		incrementpermovestogo=initialtime
 
 		movestogoperround=Builder.gci("timecontrolnumberofmoves#selected",40)
@@ -228,9 +246,13 @@ case class EngineGames(
 
 		timecontrolverbal=s"$movestogoperround move(s) in $ipmtgsverbal"
 
+		timecontrolverbalpgn=s"$movestogoperround/$incrementpermovestogosec"
+
 		if(isincremental)
 		{
 			timecontrolverbal=s"$initialtimemin min(s) + $incrementpermovesec sec(s)"
+
+			timecontrolverbalpgn=s"$initialtimesec+$incrementpermovesec"
 		}
 	}
 
@@ -267,8 +289,8 @@ case class EngineGames(
 		val sidespanstyle="padding: 5px; border-style: solid; border-width: 2px; border-radius: 10px; font-size: 20px;"
 		val sidespanwhite=s"""<span style="$sidespanstyle border-color: $WHITE_COLOR;">"""
 		val sidespanblack=s"""<span style="$sidespanstyle border-color: $BLACK_COLOR;">"""
-		val namew=playerwhite.GetDisplayName
-		val nameb=playerblack.GetDisplayName
+		val namew=playerwhite.GetDisplayName()
+		val nameb=playerblack.GetDisplayName()
 		val namestyle="font-size: 20px; color: #0000ff; padding: 5px; border-style: dotted; border widht: 2px; border-radius: 10px;"
 		val timecontrolcolor="#0000af"
 		val timecontrolinfo=if(isconventional) s"<i><font size=5><b>$movestogo</b></font> move(s) to go</i>" else ""
@@ -321,6 +343,7 @@ case class EngineGames(
 	var gameresult:GameResult=null
 
 	var gamestartfen:String=""
+	var predeterminedopening:String=""
 
 	var initturn:String="white"
 
@@ -345,6 +368,7 @@ case class EngineGames(
 
 		// remove any movelist, start from fen
 		gamestartfen=commands.g.report_fen
+		predeterminedopening=commands.g.GetOpening
 		commands.g.set_from_fen(gamestartfen)
 
 		commands.g.pgn_headers=Map[String,String]()
@@ -354,18 +378,26 @@ case class EngineGames(
 
 		val date=new Date()
 
-		val datef=format(date,"yyyy-MM-dd")
-		val timef=format(date,"HH:mm:ss")
+		val datef=format(date,"yyyy.MM.dd")
+		val timef=format(date,"HH:mm:ss ZZ")
 
 		commands.g.pgn_headers+=("Date"->datef)
 		commands.g.pgn_headers+=("Time"->timef)
 
-		commands.g.pgn_headers+=("White"->playerwhite.GetDisplayName)
-		commands.g.pgn_headers+=("Black"->playerblack.GetDisplayName)
+		commands.g.pgn_headers+=("White"->playerwhite.GetDisplayName(includeauthor=false))
+		commands.g.pgn_headers+=("Black"->playerblack.GetDisplayName(includeauthor=false))
+
+		commands.g.pgn_headers+=("Result"->"*")
+		commands.g.pgn_headers+=("Termination"->"?")
+
+		commands.g.pgn_headers+=("Round"->"1")
+		commands.g.pgn_headers+=("Annotator"->"Scalachessgui")
+		commands.g.pgn_headers+=("Opening"->predeterminedopening)
+		commands.g.pgn_headers+=("ECO"->"?")
 
 		GetTimeControl
 
-		commands.g.pgn_headers+=("Timecontrol"->timecontrolverbal)
+		commands.g.pgn_headers+=("TimeControl"->timecontrolverbalpgn)
 
 		gamethread=new Thread(new Runnable{def run{
 			gamerunning=true
@@ -422,16 +454,31 @@ case class EngineGames(
 				{
 					val thinkingtime=currentmovesteps*timestep
 					currentmovesteps=0
+
 					val extremepv=onturn.ExtremePv(lowest=false)
+
+					val depth=onturn.thinkingoutput.maxdepth
+
 					val scorenumerical=extremepv.scorenumerical
 					val signedscorenumerical=extremepv.signedscorenumerical
+
 					val movetimeformatted=formatDuration(thinkingtime,"mm:ss")+"."+(thinkingtime%1000)/100
+
 					val historyitem=GameHistoryItem(eval=scorenumerical,movetime=thinkingtime,movetimeformatted=movetimeformatted)
+
 					gamehistory.Add(historyitem)
+
 					bestmove=onturn.bestmove
+
 					val true_algeb=commands.g.b.to_true_algeb(bestmove)
+
 					val m=move(fromalgeb=true_algeb)
-					var comment=s"$movetimeformatted; $signedscorenumerical"
+
+					var scorecp="%.2f".format(scorenumerical.toDouble/100.0)
+					scorecp=scorecp.replaceAll(",",".")
+
+					var comment=s"$scorecp/$depth $movetimeformatted"
+
 					commands.g.makeMove(m,addcomment=comment)
 					gameresult=commands.g.report_result
 
@@ -494,13 +541,23 @@ case class EngineGames(
 				playerblack.Reuse
 			}})
 			gamerunning=false
+			val opening=commands.g.GetOpening
+			commands.g.pgn_headers+=(if(predeterminedopening=="*") ("Opening"->opening) else ("Opening"->predeterminedopening))
 			if(gameresult==null)
 			{
-				Update(UpdateGameStatus+"<br>Game aborted.")
+				Update(UpdateGameStatus+"<br>"+FormatResult("Game aborted!",bcolor="#ff0000"))
+				commands.g.pgn_headers+=("Result"->"*")
+				commands.g.pgn_headers+=("Termination"->"GUI info: game aborted by user")
 			} else {
-				var resultverbal=gameresult.resultstr+" ( "+gameresult.resultreason+" )"
-				Update(UpdateGameStatus+s"<br>Game finished. Result: $resultverbal")
+				val result=gameresult.resultstr
+				val reason=gameresult.resultreason
+				commands.g.pgn_headers+=("Result"->result)
+				commands.g.pgn_headers+=("Termination"->reason)
+				Update(UpdateGameStatus+"<br>"+FormatResult(s"Game finished. Result: $result",reason=s"<br>$reason"))
 			}
+			Platform.runLater(new Runnable{def run{
+				GuiUpdate()
+			}})
 			EnableBoardControls()
 		}})
 
@@ -823,7 +880,7 @@ case class GEngine(
 			|</tabpane>
 			|</scrollpane>
 		""".stripMargin
-		Builder.MyStage(pathid,modal=false,set_handler=handler,title=GetDisplayName+" console",blob=blob)
+		Builder.MyStage(pathid,modal=false,set_handler=handler,title=GetDisplayName(includeauthor=false)+" console",blob=blob)
 		BuildOptions
 		log.Update
 	}
@@ -843,22 +900,46 @@ case class GEngine(
 		}
 	}
 
-	def Unload
+	def SendQuit
 	{
+		if(engineprocess!=null)
+		{
+			if(protocol=="UCI")
+			{
+				IssueCommand("quit")
+			}
+
+			if(protocol=="XBOARD")
+			{
+				IssueCommand("quit")
+			}
+		}
+	}
+
+	def Unload
+	{	
+
+		SendQuit
+
 		if(enginereadthread!=null)
 		{
 			enginereadthread.interrupt()
 			enginereadthread=null
 		}
+
 		if(engineprocess!=null)
 		{
 			engineprocess.destroy()
 			engineprocess=null
 		}
+
 		enginein=null
 		engineout=null
+
 		CloseConsole
+
 		println(s"engine $pathid unloaded")
+
 	}
 
 	case class Option(
@@ -1518,13 +1599,13 @@ case class GEngine(
 	var features=Features()
 	var uciid=Id()
 
-	def GetDisplayName:String=
+	def GetDisplayName(includeauthor:Boolean=true):String=
 	{
 		if(protocol=="UCI")
 		{
 			if(uciid.name!="")
 			{
-				if(uciid.author!="")
+				if((uciid.author!="")&&includeauthor)
 				{
 					return uciid.name+" by "+uciid.author
 				} else {
@@ -2213,7 +2294,7 @@ case class GEngine(
 			|<td>$timeformatted</td>
 			|<td>$nodesverbal</td>
 			|<td>$npsverbal</td>
-			|<td><font color="#00007f">$pvreststr</font></td>
+			|<td><font color="blue">$bestmove</font> <font color="#00007f">$pvreststr</font></td>
 			|</tr>
 			""".stripMargin
 		}
