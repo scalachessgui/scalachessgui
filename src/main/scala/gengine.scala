@@ -137,8 +137,21 @@ case class EngineGames(
 			|<div style="font-weight: bold; margin-top: 10px; padding: 15px; border-radius: 3px; border-style: solid; border-width: 1px; background-color: $bcolor;">
 			|<font size="5">$result</font>
 			|<font size="4">$reason</font>
-			|</span>
+			|</div>
 		""".stripMargin
+	}
+
+	def GetFormattedResult:String=
+	{
+		if(gameaborted) return FormatResult("Game aborted!",bcolor="#ff0000")
+		if(gameresult==null) return s"""
+			|<div style="margin-top: 10px; padding: 15px;">
+			|<i>Game in progress ... </i>
+			|</div>
+		""".stripMargin
+		val result=gameresult.resultstr
+		val reason=gameresult.resultreason
+		FormatResult(s"Game finished. Result: $result",reason=s"<br>$reason")
 	}
 
 	def Update(content:String)
@@ -302,6 +315,7 @@ case class EngineGames(
 			|<td><input type="button" value="Start game" onclick="command='start';"></td>
 			|<td><input type="button" value="Start game from current position" onclick="command='startfrompos';"></td>
 		""".stripMargin
+		val formattedresult=GetFormattedResult
 		s"""
 			|<script>
 			|var command='';
@@ -329,6 +343,7 @@ case class EngineGames(
 			|<td style="color: $timecontrolcolor; font-size: 18px; font-weight: bold;" colspan="3"><i>$timecontrolverbal</i></td>
 			|</tr>
 			|</table>
+			|$formattedresult
 			|<table cellpadding="3" cellspacing="3">
 			|<tr>
 			|$startgamebuttons
@@ -341,6 +356,7 @@ case class EngineGames(
 	var gamehistory=GameHistory()
 
 	var gameresult:GameResult=null
+	var gameaborted:Boolean=false
 
 	var gamestartfen:String=""
 	var predeterminedopening:String=""
@@ -374,15 +390,17 @@ case class EngineGames(
 		commands.g.pgn_headers=Map[String,String]()
 
 		commands.g.pgn_headers+=("Event"->"Computer chess game")
-		commands.g.pgn_headers+=("Site"->"Scalachessgui")
+		commands.g.pgn_headers+=("Site"->"https://github.com/scalachessgui/scalachessgui")
 
 		val date=new Date()
 
 		val datef=format(date,"yyyy.MM.dd")
-		val timef=format(date,"HH:mm:ss ZZ")
+		val timef=format(date,"HH:mm:ss")
+		val timezonef=format(date,"ZZ")
 
 		commands.g.pgn_headers+=("Date"->datef)
 		commands.g.pgn_headers+=("Time"->timef)
+		commands.g.pgn_headers+=("TimeZone"->timezonef)
 
 		commands.g.pgn_headers+=("White"->playerwhite.GetDisplayName(includeauthor=false))
 		commands.g.pgn_headers+=("Black"->playerblack.GetDisplayName(includeauthor=false))
@@ -423,6 +441,7 @@ case class EngineGames(
 
 			gamehistory=GameHistory()
 			gameresult=null
+			gameaborted=false
 			var stepcnt=0
 			var currentmovesteps=0
 
@@ -545,15 +564,18 @@ case class EngineGames(
 			commands.g.pgn_headers+=(if(predeterminedopening=="*") ("Opening"->opening) else ("Opening"->predeterminedopening))
 			if(gameresult==null)
 			{
-				Update(UpdateGameStatus+"<br>"+FormatResult("Game aborted!",bcolor="#ff0000"))
+				gameaborted=true
 				commands.g.pgn_headers+=("Result"->"*")
 				commands.g.pgn_headers+=("Termination"->"GUI info: game aborted by user")
+				Update(UpdateGameStatus)
 			} else {
 				val result=gameresult.resultstr
 				val reason=gameresult.resultreason
 				commands.g.pgn_headers+=("Result"->result)
 				commands.g.pgn_headers+=("Termination"->reason)
-				Update(UpdateGameStatus+"<br>"+FormatResult(s"Game finished. Result: $result",reason=s"<br>$reason"))
+				playerwhite.SendResult(result)
+				playerblack.SendResult(result)
+				Update(UpdateGameStatus)
 			}
 			Platform.runLater(new Runnable{def run{
 				GuiUpdate()
@@ -630,6 +652,14 @@ case class GEngine(
 	var fen=""
 
 	def Loaded:Boolean=(engineprocess!=null)
+
+	def SendResult(result:String="?")
+	{
+		if(protocol=="XBOARD")
+		{
+			IssueCommand("result "+result)
+		}
+	}
 
 	def ExtremePv(lowest:Boolean=true):PvItem=
 	{
@@ -784,12 +814,7 @@ case class GEngine(
 		{
 			val wasrunning=running
 			if(running) Stop
-			if(IsAtomkraft)
-			{
-				IssueCommand("3\n"+set_multipv)
-			} else {
-				IssueCommand("setoption name MultiPV value "+multipv)
-			}
+			IssueCommand("setoption name MultiPV value "+multipv)
 			if(wasrunning) Start(g)
 		}
 	}
@@ -952,7 +977,7 @@ case class GEngine(
 		var subkind:String=""
 	)
 	{
-		def Apply
+		def Apply(reset:Boolean=false)
 		{
 			if((kind!="button")&&(send==true))
 			{
@@ -961,6 +986,12 @@ case class GEngine(
 				var value=Builder.getcvevals(id,defaultstr)
 
 				if((kind=="spin")&&(value!=defaultstr)) value=""+value.toDouble.toInt
+
+				if(reset)
+				{
+					Builder.setcvevals(id,defaultstr)
+					value=defaultstr
+				}
 
 				if(protocol=="UCI")
 				{
@@ -1074,12 +1105,16 @@ case class GEngine(
 					unit=span/10
 				}
 				var value=Builder.getcvevals(id,""+defaultstr.toDouble)
-				Builder.setcveval(id,StringData(value))
+				Builder.setcvevals(id,value)
+				val intvalue=value.toDouble.toInt
 				td1=s"""
 					|<label text="$name"/>
 				""".stripMargin
 				td2=s"""
 				|<slider width="300.0" id="$id" usevariantentry="true" min="$minstr" max="$maxstr" majortickunit="$unit" showticklabels="true"/>
+				""".stripMargin
+				td3=s"""
+				|<textfield id="$id!text" usevariantentry="true" text="$intvalue"/>
 				""".stripMargin
 			}
 			s"""
@@ -1125,6 +1160,7 @@ case class GEngine(
 
 		def InitOptions
 		{
+			Add(Option(name="Reset defaults",kind="button"))
 			Add(Option(name="Auto set FEN",kind="check",defaultstr="true",send=false))
 			Add(Option(name="Command after set FEN",kind="string",defaultstr="",send=false))
 			Add(Option(name="Auto start",kind="check",defaultstr="true",send=false))
@@ -1143,7 +1179,12 @@ case class GEngine(
 
 		def ApplyAll
 		{
-			for(option<-options) option.Apply
+			for(option<-options) option.Apply()
+		}
+
+		def ResetAll
+		{
+			for(option<-options) option.Apply(reset=true)
 		}
 	}
 
@@ -1161,9 +1202,52 @@ case class GEngine(
 
 	def options_handler(ev:MyEvent)
 	{
+
+		if(ev.kind=="textfield entered")
+		{
+			val parts=ev.id.split("!").toList
+
+			if((parts.length==2)&&(parts(1)=="text"))
+			{
+				val trueid=parts(0)
+
+				var slidername=GetNameFromId(ev.id)
+
+				slidername=slidername.replaceAll("!text$","")
+
+				val valuestr=Builder.gettftext(ev.id)
+
+				if(IsInt(valuestr))
+				{
+
+					val intvalue=valuestr.toInt
+
+					Builder.setcvevals(trueid,""+intvalue.toDouble)
+
+					Builder.setslidervalue(trueid,intvalue.toDouble)
+
+					if(protocol=="UCI")
+					{
+						IssueCommand("setoption name "+slidername+" value "+intvalue)
+					}
+					if(protocol=="XBOARD")
+					{
+						IssueCommand("option "+slidername+"="+intvalue)
+					}
+
+				}
+			}
+		}
+
 		if(ev.kind=="button pressed")
 		{
 			val buttonname=GetNameFromId(ev.id)
+
+			if(buttonname=="Reset defaults")
+			{	
+				options.ResetAll
+				BuildOptions
+			}
 
 			val parts=buttonname.split("!").toList
 
@@ -1212,6 +1296,8 @@ case class GEngine(
 			val slidername=GetNameFromId(ev.id)
 
 			val sliderint=ev.value.toDouble.toInt
+
+			Builder.settftext(ev.id+"!text",""+sliderint)
 
 			if(protocol=="UCI")
 			{
@@ -1778,6 +1864,18 @@ case class GEngine(
 	def SwitchAutoload
 	{
 		autoload= !autoload
+		if(autoload)
+		{
+			if(!Loaded)
+			{
+				Load
+			}
+		} else {
+			if(Loaded)
+			{
+				Unload
+			}
+		}
 	}
 
 	def ReportHTML:String=
@@ -1854,8 +1952,6 @@ case class GEngine(
 
 	val clip=Clipboard.getSystemClipboard()
 
-	def IsAtomkraft:Boolean=(ParseEngineNameFromPath(path)=="atomkraft")
-
 	def GetOption(name:String,default:String=""):String=
 	{
 		val id=s"engineoptions#$pathid#$name"
@@ -1900,10 +1996,9 @@ case class GEngine(
 		}
 		if(protocol=="XBOARD")
 		{
-			val truealgebline=g.current_line_true_algeb_moves
-			if(truealgebline.length==0) return
+			val truealgebline=g.current_line_true_algeb_moves			
 
-			if(autosetfen)
+			if(autosetfen&&autostart)
 			{
 				val infinitethinkingtime=24*60*1000
 				XBOARDIssueExitOrForce
@@ -1912,7 +2007,11 @@ case class GEngine(
 				IssueCommand("post")
 				IssueVariantXBOARD
 				IssueCommand("analyze")
-				for(truealgeb<-truealgebline)
+				if(truealgebline.length==0)
+				{
+					IssueCommand(s"go")
+				}
+				else for(truealgeb<-truealgebline)
 				{
 					IssueCommand(s"usermove $truealgeb")
 				}
@@ -1922,39 +2021,19 @@ case class GEngine(
 		if(protocol=="UCI")
 		{
 			val fen=g.report_fen
-			if(IsAtomkraft)
+			
+			if(autosetfen)
 			{
-				if(autosetfen)
-				{
-					val content = new ClipboardContent()
-	                content.putString(fen)
-	                clip.setContent(content)
-            	}
-
-            	IssueCommandAfterSetFEN
-                
-                if(autostart)
-                {
-                	IssueCommand("1\n4")
-
-                	running=true
-            	}
+				IssueCommand("position fen "+fen)
 			}
-			else
+
+			IssueCommandAfterSetFEN
+
+			if(autostart)
 			{
-				if(autosetfen)
-				{
-					IssueCommand("position fen "+fen)
-				}
+				IssueCommand("go infinite")
 
-				IssueCommandAfterSetFEN
-
-				if(autostart)
-				{
-					IssueCommand("go infinite")
-
-					running=true
-				}
+				running=true
 			}
 		}
 	}
@@ -1988,17 +2067,26 @@ case class GEngine(
 		if(protocol=="UCI")
 		{
 			bestmovereceived=false
-			if(IsAtomkraft)
-			{
-				IssueCommand("s")
-			} else {
-				IssueCommand("stop")
-			}
+
+			IssueCommand("stop")
+
 			if(!forced)
 			{
-				while(!bestmovereceived)
+				var timeoutcnt=0;
+				while((!bestmovereceived)&&(timeoutcnt< 100))
 				{
 					try{Thread.sleep(50)}catch{case e:Throwable=>{}}
+					timeoutcnt+=1;
+				}
+				if(timeoutcnt>=100)
+				{
+					val blob=s"""
+						|<vbox padding="10" gap="10">
+						|<label style="-fx-font-size: 24px; -fx-text-fill: #ff0000; -fx-font-weight: bold;" text="Engine timed out on stop."/>
+						|<label style="-fx-font-size: 18px; -fx-text-fill: #0000ff;" text="Check protocol."/>
+						|</vbox>
+					""".stripMargin
+					Builder.MyStage("enginetimeout",modal=true,do_size=false,set_handler=handler,title="Engine time out",blob=blob)
 				}
 			}
 			running=false

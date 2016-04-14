@@ -252,6 +252,41 @@ object Builder
 		null
 	}
 
+	def settftext(id:String,what:String)
+	{
+		val tf=gettext(id)
+		if(tf!=null)
+		{
+			tf.setText(what)
+		}
+	}
+
+	def gettftext(id:String):String=
+	{
+		val tf=gettext(id)
+		if(tf!=null)
+		{
+			return tf.getText
+		}
+		""
+	}
+
+	def getslider(id:String):MySlider=
+	{
+		val comp=getcomp(id)
+		if((comp!=null)&&(comp.isInstanceOf[MySlider])) return comp.asInstanceOf[MySlider]
+		null
+	}
+
+	def setslidervalue(id:String,value:Double)
+	{
+		val sl=getslider(id)
+		if(sl!=null)
+		{
+			sl.set_gui_value_safe(StringData(""+value))
+		}
+	}
+
 	def getcheck(id:String):MyCheckBox=
 	{
 		val comp=getcomp(id)
@@ -461,6 +496,11 @@ object Builder
 	def setcveval(id:String,what:Data)
 	{
 		setval(cvepath(id),what)
+	}
+
+	def setcvevals(id:String,what:String)
+	{
+		setval(cvepath(id),StringData(what))
 	}
 
 	def setcvevall(id:String,what:List[String])
