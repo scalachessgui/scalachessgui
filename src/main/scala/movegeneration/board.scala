@@ -695,6 +695,33 @@ class board
 		false
 	}
 
+	def isAlgebLegal(algeb:String):Boolean=
+	{
+		val m=move(fromalgeb=algeb)
+
+		if(m.from==NO_SQUARE) return false
+		if(m.to==NO_SQUARE) return false
+
+		val dummy=this.cclone
+
+		dummy.currentSq=m.from
+
+		if(!dummy.setCurrentPtr(m.from,rep(m.from))) return false
+
+		var ok=true
+
+		while(dummy.nextLegalMove&&ok)
+		{
+			ok=(dummy.currentSq==m.from)
+			if(ok)
+			{
+				if(dummy.current_move.toAlgeb==algeb) return true
+			}
+		}
+
+		false
+	}
+
 	def pieceMovesToSq(p:TPiece,sq:TSquare):ArrayBuffer[move]=
 	{
 		val a=ArrayBuffer[move]()

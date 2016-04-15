@@ -669,6 +669,8 @@ case class GEngine(
 
 	var fen=""
 
+	var root_fen=""
+
 	def Loaded:Boolean=(engineprocess!=null)
 
 	def SendResult(result:String="?")
@@ -757,6 +759,8 @@ case class GEngine(
 
 	def StartThinking
 	{
+
+		root_fen=fen
 
 		thinkingoutput=ThinkingOutput()
 
@@ -2021,6 +2025,7 @@ case class GEngine(
 		if(engineprocess==null) return
 		if(startup) return
 		if(running) return
+		root_fen=g.report_fen
 		thinkingoutput=ThinkingOutput()
 		OpenConsole
 		val autosetfen=GetBoolOption("Auto set FEN",true)
@@ -2259,7 +2264,9 @@ case class GEngine(
 		var pvrest:List[String]=List[String](),
 		var pvreststr:String="",
 		var haspv:Boolean=false,
-		var bestmove:String=""
+		var bestmove:String="",
+		var bestmovesan:String="",
+		var pvsan:String=""
 	)
 	{
 		def AsString:String=
@@ -2279,6 +2286,28 @@ case class GEngine(
 		{
 			if(nps< 1000) return ""+nps else
 			if(nps< 1000000) return ""+FormatNodes(nps,1000)+" kN/s" else return FormatNodes(nps,1000000)+" MN/s"
+		}
+		def pvToSan(pv:String)
+		{
+			val dummy=new game
+			dummy.set_from_fen(root_fen)
+			val algebparts=pv.split(" ")
+			var first=true
+			bestmovesan=algebparts(0)
+			for(algeb<-algebparts)
+			{
+				if(dummy.b.isAlgebLegal(algeb))
+				{
+					val m=move(fromalgeb=algeb)
+					if(first)
+					{
+						bestmovesan=dummy.b.toSan(m)
+						first=false
+					}
+					dummy.makeMove(m)
+				}
+			}
+			pvsan=dummy.current_line_pgn
 		}
 		def ParseLine(line:String):PvItem=
 		{
@@ -2350,6 +2379,7 @@ case class GEngine(
 							bestmove=pvtokens.head
 							pvrest=pvtokens.tail
 							pvreststr=pvrest.mkString(" ")
+							pvToSan(pv)
 						}
 					}
 				}
@@ -2386,6 +2416,7 @@ case class GEngine(
 					bestmove=pvtokens.head
 					pvrest=pvtokens.tail
 					pvreststr=pvrest.mkString(" ")
+					pvToSan(pv)
 				}
 			}
 			return this
@@ -2404,6 +2435,8 @@ case class GEngine(
 				pvrest=ui.pvrest
 				pvreststr=ui.pvreststr
 				bestmove=ui.bestmove
+				bestmovesan=ui.bestmovesan
+				pvsan=ui.pvsan
 				haspv=true
 			}
 			if(ui.hasscore)
@@ -2428,13 +2461,13 @@ case class GEngine(
 			val timeformatted=formatDuration(time,"HH:mm:ss")
 			s"""
 			|<tr>
-			|<td><font color="blue">$bestmove</font></td>
+			|<td><font color="blue"><b>$bestmovesan</b></font></td>
 			|<td><font color="$scorecolor">$scoreverbal</font></td>
-			|<td>$depth</td>
-			|<td>$timeformatted</td>
-			|<td>$nodesverbal</td>
-			|<td>$npsverbal</td>
-			|<td><font color="blue">$bestmove</font> <font color="#00007f">$pvreststr</font></td>
+			|<td><font color="blue">$depth</font></td>
+			|<td><font color="brown">$timeformatted</font></td>
+			|<td><small>$nodesverbal</small></td>
+			|<td><small>$npsverbal</small></td>
+			|<td><font color="#0000af">$pvsan</font></td>
 			|</tr>
 			""".stripMargin
 		}
@@ -2481,13 +2514,13 @@ case class GEngine(
 			val multipvs=SortedMultipvs
 			val multipvscontent=(for(multipv<-multipvs) yield pvitems(multipv).ReportHTMLTableRow).mkString("\n")
 			s"""
-				|<tr>
-				|<td width="50">Move</td>
-				|<td width="50">Score</td>
-				|<td width="50">Depth</td>
-				|<td width="50">Time</td>
-				|<td width="80">Nodes</td>
-				|<td width="80">Nps</td>
+				|<tr style="font-size: 12px;">
+				|<td width="40">Move</td>
+				|<td width="40">Score</td>
+				|<td width="30">Depth</td>
+				|<td width="40">Time</td>
+				|<td width="60">Nodes</td>
+				|<td width="60">Nps</td>
 				|<td>Pv</td>
 				|</tr>
 				|$multipvscontent
