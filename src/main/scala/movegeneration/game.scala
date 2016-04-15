@@ -127,9 +127,11 @@ class game
 		trunc_fen
 	}
 
+	def HasMoves:Boolean= ( root.childs.keys.toList.length > 0 )
+
 	def GetOpening:String=
 	{
-		if(root.childs.keys.toList.length<=0) return "*"
+		if(!HasMoves) return "*"
 		val dummy=new game
 		dummy.set_from_fen(root.fen)
 		var ptr=root
@@ -141,6 +143,16 @@ class game
 			cnt+=1
 		}
 		dummy.current_line_pgn
+	}
+
+	def is_from_startpos:Boolean=
+	{
+		if(getvariant=="Chess960") return false
+		val dummy=new board
+		dummy.reset
+		val start_fen=dummy.report_fen
+		val root_fen=root.fen
+		start_fen==root_fen
 	}
 
 	def report_result:GameResult=
@@ -611,8 +623,20 @@ class game
 		{
 			pgn+=dummy.fullmove_number+". ... "
 		}
+		else if(!HasMoves)
+		{
+			pgn+=dummy.fullmove_number+". "
+		}
 
-		report_pgn_recursive(root,false)
+		if(HasMoves)
+		{
+			report_pgn_recursive(root,false)
+		}
+		else
+		{
+			pgn+="*"
+		}
+		
 
 		pgn=pgn.replaceAll(" +"," ")
 		pgn=pgn.replaceAll(" +\\)",")")
@@ -802,8 +826,22 @@ class game
 				|<font color="#0000ff">$fmn. ...</font> 
 			""".stripMargin
 		}
+		else if(!HasMoves)
+		{
+			val fmn=dummy.fullmove_number
+			pgn+=s"""
+				|<font color="#0000ff">$fmn. </font> 
+			""".stripMargin
+		}
 
-		report_pgn_recursive(root,false)
+		if(HasMoves)
+		{
+			report_pgn_recursive(root,false)
+		}
+		else
+		{
+			pgn+="*"
+		}
 
 		pgn=pgn.replaceAll(" +"," ")
 		pgn=pgn.replaceAll(" +\\)",")")
@@ -812,7 +850,7 @@ class game
 	}
 
 	val PreferredPgnHeaders:List[String]=List("Event","Site","Date","Round","White","Black","Result","TimeControl",
-		"Time","Variant","FEN","Termination","Annotator","Opening","ECO")
+		"Time","TimeZone","Variant","FEN","Termination","Annotator","Opening","ECO")
 
 	def PgnHeaderSortFunc(a:String,b:String):Boolean=
 	{

@@ -567,6 +567,8 @@ case class EngineGames(
 				gameaborted=true
 				commands.g.pgn_headers+=("Result"->"*")
 				commands.g.pgn_headers+=("Termination"->"GUI info: game aborted by user")
+				playerwhite.SendResult("*")
+				playerblack.SendResult("*")
 				Update(UpdateGameStatus)
 			} else {
 				val result=gameresult.resultstr
@@ -747,7 +749,7 @@ case class GEngine(
 		if(protocol=="UCI")
 		{
 			IssueCommand(s"position fen $fen")
-			val issuemovestogo=if(movestogo!=0) s" movestogo $movestogo" else " movestogo 5"
+			val issuemovestogo=if(movestogo!=0) s" movestogo $movestogo" else ""
 			IssueCommand(s"go wtime $wtime btime $btime winc $winc binc $binc"+issuemovestogo)
 		}
 
@@ -960,6 +962,9 @@ case class GEngine(
 
 		enginein=null
 		engineout=null
+
+		running=false
+		thinking=false
 
 		CloseConsole
 
@@ -1546,6 +1551,7 @@ case class GEngine(
 				bestmovereceived=true
 				bestmove=tokenizer.Get
 				thinking=false
+				running=false
 			}
 		}
 
@@ -1625,9 +1631,23 @@ case class GEngine(
 		}
 	}
 
+	var prevcommand="";
+
+	def DuplicateCommand(command:String):Boolean=
+	{
+		if(command!=prevcommand) return false
+		if(protocol=="XBOARD")
+		{
+			if(command=="exit") return true
+		}
+		return false
+	}
+
 	def IssueCommand(command:String)
 	{
 		if(command==null) return
+		if(DuplicateCommand(command)) return
+		prevcommand=command
 		val fullcommand=command+"\n"
 		try
 		{
@@ -2002,18 +2022,32 @@ case class GEngine(
 			{
 				val infinitethinkingtime=24*60*1000
 				XBOARDIssueExitOrForce
-				IssueCommand("new")
-				IssueCommand("force")
+				val set_from_fen= features.setboard && (!g.is_from_startpos)
+				if(!set_from_fen)
+				{
+					IssueCommand("new")
+					IssueCommand("force")
+				}
 				IssueCommand("post")
 				IssueVariantXBOARD
 				IssueCommand("analyze")
-				if(truealgebline.length==0)
+				if(set_from_fen)
 				{
+					val fen=g.report_fen
+
+					IssueCommand(s"setboard $fen")
 					IssueCommand(s"go")
 				}
-				else for(truealgeb<-truealgebline)
+				else
 				{
-					IssueCommand(s"usermove $truealgeb")
+					if(truealgebline.length==0)
+					{
+						IssueCommand(s"go")
+					}
+					else for(truealgeb<-truealgebline)
+					{
+						IssueCommand(s"usermove $truealgeb")
+					}
 				}
 				running=true
 			}
@@ -2054,8 +2088,10 @@ case class GEngine(
 	{
 		if(engineprocess==null) return
 		if(startup) return
-		if(!forced)
+		if(forced)
 		{
+			if(!thinking) return
+		} else {
 			if(!running) return
 		}
 		if(protocol=="XBOARD")
@@ -2096,7 +2132,8 @@ case class GEngine(
 	def CheckRestart(g:game)
 	{
 		if(engineprocess==null) return
-		if(running&&(GetBoolOption("Auto start",true)))
+		if((!GetBoolOption("Auto start",true))||(!GetBoolOption("Auto set FEN",true))) return
+		if(running)
 		{
 			Stop
 			Start(g)
