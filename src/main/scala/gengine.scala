@@ -131,12 +131,11 @@ case class EngineGames(
 		}
 	}
 
-	def FormatResult(result:String,reason:String="",bcolor:String="#00ff00"):String=
+	def FormatResult(result:String,bcolor:String="#00ff00"):String=
 	{
 		s"""
 			|<div style="font-weight: bold; margin-top: 10px; padding: 15px; border-radius: 3px; border-style: solid; border-width: 1px; background-color: $bcolor;">
-			|<font size="5">$result</font>
-			|<font size="4">$reason</font>
+			|$result
 			|</div>
 		""".stripMargin
 	}
@@ -144,6 +143,7 @@ case class EngineGames(
 	def GetFormattedResult:String=
 	{
 		if(gameaborted) return FormatResult("Game aborted!",bcolor="#ff0000")
+		if(gamecantstart!="") return FormatResult(gamecantstart,bcolor="#ffff00")
 		if(gameresult==null) return s"""
 			|<div style="margin-top: 10px; padding: 15px;">
 			|<i>Game in progress ... </i>
@@ -151,7 +151,7 @@ case class EngineGames(
 		""".stripMargin
 		val result=gameresult.resultstr
 		val reason=gameresult.resultreason
-		FormatResult(s"Game finished. Result: $result",reason=s"<br>$reason")
+		FormatResult(s"""Game finished. Result: <font size="5">$result</font><br><font size="4">$reason</font>""")
 	}
 
 	def Update(content:String)
@@ -294,6 +294,25 @@ case class EngineGames(
 
 	def UpdateGameStatus:String=
 	{
+		val formattedresult=GetFormattedResult
+
+		var startgamebuttons=if(gamerunning) s"""
+			|<td><input type="button" value="Abort game" onclick="command='abort';"></td>
+		""".stripMargin else
+		s"""
+			|<td><input type="button" value="Start game" onclick="command='start';"></td>
+			|<td><input type="button" value="Start game from current position" onclick="command='startfrompos';"></td>
+		""".stripMargin
+
+		if(gamecantstart!="") return s"""
+			|$formattedresult
+			|<table cellpadding="3" cellspacing="3">
+			|<tr>
+			|$startgamebuttons
+			|</tr>
+			|</table>
+		""".stripMargin
+
 		val wtime=formatDuration(playerwhite.time,"HH:mm:ss")
 		val btime=formatDuration(playerblack.time,"HH:mm:ss")
 		val timestyle="font-size:36px; font-family: monospace; font-weight: bold; padding: 3px; border-style: solid; border-width: 2px; border-color: #000000; border-radius: 10px;"
@@ -308,14 +327,6 @@ case class EngineGames(
 		val timecontrolcolor="#0000af"
 		val timecontrolinfo=if(isconventional) s"<i><font size=5><b>$movestogo</b></font> move(s) to go</i>" else ""
 		val chartsvg=gamehistory.ChartSvg
-		var startgamebuttons=if(gamerunning) s"""
-			|<td><input type="button" value="Abort game" onclick="command='abort';"></td>
-		""".stripMargin else
-		s"""
-			|<td><input type="button" value="Start game" onclick="command='start';"></td>
-			|<td><input type="button" value="Start game from current position" onclick="command='startfrompos';"></td>
-		""".stripMargin
-		val formattedresult=GetFormattedResult
 		s"""
 			|<script>
 			|var command='';
@@ -357,6 +368,7 @@ case class EngineGames(
 
 	var gameresult:GameResult=null
 	var gameaborted:Boolean=false
+	var gamecantstart:String=""
 
 	var gamestartfen:String=""
 	var predeterminedopening:String=""
@@ -366,19 +378,24 @@ case class EngineGames(
 	def StartGame(fromposition:Boolean=false)
 	{
 		if(gamerunning) return
+		gameaborted=false
+		gamecantstart=""
 		if(!SelectPlayers)
 		{
-			Update(selectplayersmessage)
+			gamecantstart=selectplayersmessage
+			Update(UpdateGameStatus)
 			return
 		}
 		if((!playerwhite.CanSetboard)||(!playerblack.CanSetboard))
 		{
-			Update("Engine support for starting game from a given position is missing. Game could not be started.")
+			gamecantstart="Engine support for starting game from a given position is missing. Game could not be started."
+			Update(UpdateGameStatus)
 			return
 		}
 		if(commands.g.report_result!=null)
 		{
-			Update("Game starting position is final. Game could not be started.")
+			gamecantstart="Game starting position is final. Game could not be started."
+			Update(UpdateGameStatus)
 			return
 		}
 
@@ -441,7 +458,6 @@ case class EngineGames(
 
 			gamehistory=GameHistory()
 			gameresult=null
-			gameaborted=false
 			var stepcnt=0
 			var currentmovesteps=0
 
@@ -555,10 +571,6 @@ case class EngineGames(
 			}
 			playerwhite.StopForced
 			playerblack.StopForced
-			Platform.runLater(new Runnable{def run{
-				playerwhite.Reuse
-				playerblack.Reuse
-			}})
 			gamerunning=false
 			val opening=commands.g.GetOpening
 			commands.g.pgn_headers+=(if(predeterminedopening=="*") ("Opening"->opening) else ("Opening"->predeterminedopening))
@@ -581,6 +593,10 @@ case class EngineGames(
 			}
 			Platform.runLater(new Runnable{def run{
 				GuiUpdate()
+			}})
+			Platform.runLater(new Runnable{def run{
+				playerwhite.Reuse
+				playerblack.Reuse
 			}})
 			EnableBoardControls()
 		}})
@@ -2036,7 +2052,6 @@ case class GEngine(
 					val fen=g.report_fen
 
 					IssueCommand(s"setboard $fen")
-					IssueCommand(s"go")
 				}
 				else
 				{
