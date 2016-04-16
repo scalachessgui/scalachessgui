@@ -2102,6 +2102,7 @@ case class GEngine(
 				if(g.is_from_startpos)
 				{
 					IssueCommand("new")
+					IssueCommand("force")
 
 					for(truealgeb<-truealgebline)
 					{
