@@ -41,7 +41,8 @@ case class EngineGames(
 	DisableBoardControls:()=>Unit,
 	EnableBoardControls:()=>Unit,
 	GetEngineList:()=>GEngineList,
-	GuiUpdate:()=>Unit
+	GuiUpdate:()=>Unit,
+	AddCurrentGameToBook:()=>Unit
 )
 {
 	var gamerunning=false
@@ -582,6 +583,7 @@ case class EngineGames(
 				playerwhite.SendResult("*")
 				playerblack.SendResult("*")
 				Update(UpdateGameStatus)
+				
 			} else {
 				val result=gameresult.resultstr
 				val reason=gameresult.resultreason
@@ -598,6 +600,27 @@ case class EngineGames(
 				playerwhite.Reuse
 				playerblack.Reuse
 			}})
+			if(gameaborted)
+			{
+				if(Builder.gcb("autoaddabortedenginegames",false))
+				{
+					try{Thread.sleep(5000)}catch{case e:Throwable=>{interrupted=true}}
+					Platform.runLater(new Runnable{def run{
+						AddCurrentGameToBook()
+					}})
+				}
+			} else {
+				if(gameresult!=null)
+				{
+					if(Builder.gcb("autoaddfinishedenginegames",false))
+					{
+						try{Thread.sleep(5000)}catch{case e:Throwable=>{interrupted=true}}
+						Platform.runLater(new Runnable{def run{						
+							AddCurrentGameToBook()
+						}})
+					}
+				}
+			}
 			EnableBoardControls()
 		}})
 

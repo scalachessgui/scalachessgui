@@ -1,0 +1,10 @@
+<vbox padding="5" gap="5">
+	<hbox padding="5" gap="5">
+		<label text="Auto add finished engine games"/>
+		<checkbox id="autoaddfinishedenginegames"/>
+	</hbox>
+	<hbox padding="5" gap="5">
+		<label text="Auto add aborted engine games"/>
+		<checkbox id="autoaddabortedenginegames"/>
+	</hbox>
+</vbox>

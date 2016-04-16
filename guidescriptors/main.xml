@@ -21,6 +21,10 @@
 				<menuitem id="startenginegamefromcurrentposition" text="Start game from current position"></menuitem>
 				<menuitem id="abortenginegame" text="Abort game"></menuitem>
 			</menu>
+			<menu text="Book">
+				<menuitem id="addcurrentgametobook" text="Add current game to book"></menuitem>
+				<menuitem id="booksettings" text="Settings"></menuitem>
+			</menu>
 			<menu text="PGN">
 				<menuitem id="openpgn" text="Open"></menuitem>
 				<menuitem id="savepgnas" text="Save as"></menuitem>

@@ -52,7 +52,7 @@ class GuiClass extends Application
 
 	var enginelist:GEngineList=null
 
-	var enginegames=EngineGames(DisableBoardControls,EnableBoardControls,GetEngineList,GuiUpdate)
+	var enginegames=EngineGames(DisableBoardControls,EnableBoardControls,GetEngineList,GuiUpdate,addcurrentgametobook)
 
 	def getpanewidth=Builder.gsd("panewidth",750.0)
 	def getinnerpanewidth=getpanewidth-30.0
@@ -573,6 +573,42 @@ class GuiClass extends Application
 		incrementaloutervbox.setStyle(borderstyle)
 	}
 
+	def addcurrentgametobook()
+	{
+		val book_enabled=Builder.gcb("bookenabled",true)
+		if(!book_enabled)
+		{
+			val waitblob="""
+				|<vbox style="-fx-font-size: 24px; -fx-font-weight: bold;" padding="50" gap="5">
+				|<label text="Book is not enabled." />
+				|<label text="Cannot add game to book." />
+				|</vbox>
+			""".stripMargin
+			Builder.MyStage("waitbookbuild",modal=true,unclosable=false,set_handler=handler,title="Adding game to book failed",blob=waitblob)
+			Platform.runLater(new Runnable{def run{
+				try{Thread.sleep(5000)}catch{case e:Throwable=>{}}
+				Builder.closeStage("waitbookbuild")
+			}})
+			return
+		}
+		commands.g.log_callback=commands.g.default_log_callback
+		val pgn=commands.g.report_pgn
+		val waitblob="""
+			|<vbox style="-fx-font-size: 24px; -fx-font-weight: bold;" padding="50" gap="5">
+			|<label text="Adding game to book ..." />
+			|<label text="Please wait!" />
+			|</vbox>
+		""".stripMargin
+		Builder.MyStage("waitbookbuild",modal=true,unclosable=false,set_handler=handler,title="Adding game to book",blob=waitblob)
+		commands.g.build_book(pgn)
+		commands.g.set_from_pgn(pgn)
+		commands.g.toend
+		Platform.runLater(new Runnable{def run{
+			try{Thread.sleep(3000)}catch{case e:Throwable=>{}}
+			Builder.closeStage("waitbookbuild")
+		}})				
+	}
+
 	def handler(ev:MyEvent)
 	{
 		Builder.default_handler(ev)
@@ -709,6 +745,16 @@ class GuiClass extends Application
 
 		if(ev.kind=="menuitem clicked")
 		{
+
+			if(ev.id=="addcurrentgametobook")
+			{
+				addcurrentgametobook
+			}
+
+			if(ev.id=="booksettings")
+			{
+				Builder.MyStage("booksettings",modal=true,set_handler=handler,do_size=false,title="Book settings")
+			}
 
 			val rmatch="""random([0-9]+)""".r
 
