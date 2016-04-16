@@ -578,35 +578,17 @@ class GuiClass extends Application
 		val book_enabled=Builder.gcb("bookenabled",true)
 		if(!book_enabled)
 		{
-			val waitblob="""
-				|<vbox style="-fx-font-size: 24px; -fx-font-weight: bold;" padding="50" gap="5">
-				|<label text="Book is not enabled." />
-				|<label text="Cannot add game to book." />
-				|</vbox>
-			""".stripMargin
-			Builder.MyStage("waitbookbuild",modal=true,unclosable=false,set_handler=handler,title="Adding game to book failed",blob=waitblob)
-			Platform.runLater(new Runnable{def run{
-				try{Thread.sleep(5000)}catch{case e:Throwable=>{}}
-				Builder.closeStage("waitbookbuild")
-			}})
+			SystemMessage.Show("Adding game to book failed","Cannot add game to book.","Book is not enabled.")
+			SystemMessage.Hide()
 			return
 		}
+		SystemMessage.Show("Adding game to book","Adding game to book ...","Please wait.")
 		commands.g.log_callback=commands.g.default_log_callback
 		val pgn=commands.g.report_pgn
-		val waitblob="""
-			|<vbox style="-fx-font-size: 24px; -fx-font-weight: bold;" padding="50" gap="5">
-			|<label text="Adding game to book ..." />
-			|<label text="Please wait!" />
-			|</vbox>
-		""".stripMargin
-		Builder.MyStage("waitbookbuild",modal=true,unclosable=false,set_handler=handler,title="Adding game to book",blob=waitblob)
 		commands.g.build_book(pgn)
 		commands.g.set_from_pgn(pgn)
 		commands.g.toend
-		Platform.runLater(new Runnable{def run{
-			try{Thread.sleep(3000)}catch{case e:Throwable=>{}}
-			Builder.closeStage("waitbookbuild")
-		}})				
+		SystemMessage.Hide(3000)
 	}
 
 	def handler(ev:MyEvent)

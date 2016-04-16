@@ -82,7 +82,9 @@ case class EngineGames(
 			var mineval:Int=0
 			for(item<-items)
 			{
-				val eval=item.eval
+				var eval=item.eval
+				if(eval>10000) eval=10000
+				if(eval< -10000) eval= -10000
 				if(first)
 				{
 					maxeval=eval
@@ -100,6 +102,7 @@ case class EngineGames(
 			else if(range< 1000) range=1000
 			else if(range< 2000) range=2000
 			else if(range< 5000) range=5000
+			else range=10000
 			var i=0
 			var svgbars=List[String]()
 			for(item<-items)
@@ -600,25 +603,29 @@ case class EngineGames(
 				playerwhite.Reuse
 				playerblack.Reuse
 			}})
+			val autoaddaborted=Builder.gcb("autoaddabortedenginegames",false)
+			val autoaddfinished=Builder.gcb("autoaddfinishedenginegames",false)
+			Platform.runLater(new Runnable{def run{
+				SystemMessage.Show("Closing engine game","Please wait.",id="waitenginegameclosedialog")
+			}})
+			try{Thread.sleep(5000)}catch{case e:Throwable=>{}}
+			Platform.runLater(new Runnable{def run{
+				SystemMessage.Hide(0,id="waitenginegameclosedialog")
+			}})
 			if(gameaborted)
 			{
-				if(Builder.gcb("autoaddabortedenginegames",false))
-				{
-					try{Thread.sleep(5000)}catch{case e:Throwable=>{interrupted=true}}
+				if(autoaddaborted)
+				{					
 					Platform.runLater(new Runnable{def run{
 						AddCurrentGameToBook()
 					}})
 				}
 			} else {
-				if(gameresult!=null)
+				if(autoaddfinished&&(gameresult!=null))
 				{
-					if(Builder.gcb("autoaddfinishedenginegames",false))
-					{
-						try{Thread.sleep(5000)}catch{case e:Throwable=>{interrupted=true}}
-						Platform.runLater(new Runnable{def run{						
-							AddCurrentGameToBook()
-						}})
-					}
+					Platform.runLater(new Runnable{def run{						
+						AddCurrentGameToBook()
+					}})
 				}
 			}
 			EnableBoardControls()

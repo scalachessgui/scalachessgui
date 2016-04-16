@@ -7,6 +7,20 @@
 		</m>
 	</m>
 	
+	<m p="stages#systemmessagedialog">
+		<m>
+			<v key="x">150</v>
+			<v key="y">150</v>
+		</m>
+	</m>
+	
+	<m p="stages#waitenginegameclosedialog">
+		<m>
+			<v key="x">150</v>
+			<v key="y">150</v>
+		</m>
+	</m>
+	
 	<m p="settings#panewidth">
 		<v>750.0</v>
 	</m>

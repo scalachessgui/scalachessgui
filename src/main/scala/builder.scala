@@ -1731,3 +1731,25 @@ object Builder
 		node.asInstanceOf[Parent]
 	}
 }
+
+object SystemMessage
+{
+	def Show(title:String,message:String,comment:String="",id:String="systemmessagedialog")
+	{
+		val systemmessageblob=s"""
+				|<vbox style="-fx-font-size: 24px; -fx-font-weight: bold;" padding="50" gap="5">
+				|<label text="$message" />
+				|<label text="$comment" />
+				|</vbox>
+			""".stripMargin
+		Builder.MyStage(id,modal=true,unclosable=true,set_handler=Builder.default_handler,title=title,blob=systemmessageblob)
+	}
+
+	def Hide(duration:Int=5000,id:String="systemmessagedialog")
+	{
+		Platform.runLater(new Runnable{def run{
+			try{Thread.sleep(duration)}catch{case e:Throwable=>{}}
+			Builder.closeStage(id)
+		}})
+	}
+}
