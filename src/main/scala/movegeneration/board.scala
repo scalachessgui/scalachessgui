@@ -230,6 +230,7 @@ class board
 
 	def to_true_algeb(algeb:String):String=
 	{
+		if(getvariant=="Chess960") return algeb
 		val whitekingalgeb=toAlgeb(whereIsKing(WHITE))
 		if(whitekingalgeb=="e1")
 		{

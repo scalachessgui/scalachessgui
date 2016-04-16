@@ -1645,7 +1645,7 @@ case class GEngine(
 		{
 			xboardstate="Analyzing"
 		}
-		if(command=="force")
+		if(command=="exit")
 		{
 			xboardstate="Observing"
 		}
@@ -2025,7 +2025,6 @@ case class GEngine(
 		if(engineprocess==null) return
 		if(startup) return
 		if(running) return
-		root_fen=g.report_fen
 		thinkingoutput=ThinkingOutput()
 		OpenConsole
 		val autosetfen=GetBoolOption("Auto set FEN",true)
@@ -2037,57 +2036,80 @@ case class GEngine(
 		}
 		if(protocol=="XBOARD")
 		{
-			val truealgebline=g.current_line_true_algeb_moves			
+			// truealgebline is the line leading to the current position from the game root position
+			// in engine algebraic notation
+			// this is called 'true' to distinguish it from internally used Chess960 algebraic notation
+			val truealgebline=g.current_line_true_algeb_moves
+			// difftruealgebline is like trualgebline, just from the last analyzed position stored in root_fen
+			// if the current position cannot be tracked back to root_fen, then it is null
+			val difftruealgebline=g.diff_true_algeb_moves(root_fen)
+
+			val fen=g.report_fen
 
 			if(autosetfen&&autostart)
 			{
-				val infinitethinkingtime=24*60*1000
-				XBOARDIssueExitOrForce
-				val set_from_fen= features.setboard && (!g.is_from_startpos)
-				if(!set_from_fen)
-				{
-					IssueCommand("new")
-					IssueCommand("force")
-				}
+				IssueCommand("force")
 				IssueCommand("post")
 				IssueVariantXBOARD
-				IssueCommand("analyze")
-				if(set_from_fen)
-				{
-					val fen=g.report_fen
 
-					IssueCommand(s"setboard $fen")
-				}
-				else
+				if(difftruealgebline!=null)
 				{
-					if(truealgebline.length==0)
+					// the position can be reached by making moves from the current position
+					for(truealgeb<-difftruealgebline)
 					{
-						IssueCommand(s"go")
+						IssueCommand(s"usermove $truealgeb")
 					}
-					else for(truealgeb<-truealgebline)
+
+					IssueCommand("analyze")
+
+					root_fen=fen
+
+					running=true
+
+					return
+				}
+				
+				if(g.is_from_startpos)
+				{
+					IssueCommand("new")
+
+					for(truealgeb<-truealgebline)
 					{
 						IssueCommand(s"usermove $truealgeb")
 					}
 				}
+				else
+				{
+					if(!features.setboard) return
+
+					IssueCommand(s"setboard $fen")
+				}
+				
+				IssueCommand("analyze")
+
+				root_fen=fen
+
 				running=true
 			}
 		}
 		if(protocol=="UCI")
-		{
-			val fen=g.report_fen
-			
+		{	
 			if(autosetfen)
 			{
+				val fen=g.report_fen
+
+				root_fen=fen
+
 				IssueCommand("position fen "+fen)
-			}
 
-			IssueCommandAfterSetFEN
+				IssueCommandAfterSetFEN
 
-			if(autostart)
-			{
-				IssueCommand("go infinite")
+				if(autostart)
+				{
+					IssueCommand("go infinite")
 
-				running=true
+					running=true
+				}
 			}
 		}
 	}
@@ -2458,16 +2480,16 @@ case class GEngine(
 		def ReportHTMLTableRow:String=
 		{
 			val scorecolor=if(scorenumerical>=0) "#007f00" else "#7f0000"
-			val timeformatted=formatDuration(time,"HH:mm:ss")
+			val timeformatted=formatDuration(time,"mm:ss")
 			s"""
 			|<tr>
 			|<td><font color="blue"><b>$bestmovesan</b></font></td>
-			|<td><font color="$scorecolor">$scoreverbal</font></td>
-			|<td><font color="blue">$depth</font></td>
-			|<td><font color="brown">$timeformatted</font></td>
+			|<td><font color="$scorecolor"><b>$scoreverbal</b></font></td>
+			|<td><font color="blue"><b>$depth</b></font></td>
+			|<td><font color="#007f7f"><small>$timeformatted<small></font></td>
 			|<td><small>$nodesverbal</small></td>
 			|<td><small>$npsverbal</small></td>
-			|<td><font color="#0000af">$pvsan</font></td>
+			|<td><font color="#0000af"><small>$pvsan</small></font></td>
 			|</tr>
 			""".stripMargin
 		}
@@ -2517,8 +2539,8 @@ case class GEngine(
 				|<tr style="font-size: 12px;">
 				|<td width="40">Move</td>
 				|<td width="40">Score</td>
-				|<td width="30">Depth</td>
-				|<td width="40">Time</td>
+				|<td width="20">Dpt</td>
+				|<td width="27">Time</td>
 				|<td width="60">Nodes</td>
 				|<td width="60">Nps</td>
 				|<td>Pv</td>

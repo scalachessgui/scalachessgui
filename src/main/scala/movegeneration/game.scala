@@ -274,6 +274,30 @@ class game
 		a.reverse
 	}
 
+	def diff_true_algeb_moves(root_fen:String):ArrayBuffer[String]=
+	{
+		var a=ArrayBuffer[String]()
+
+		var cn=current_node
+
+		var found=false
+
+		while((cn!=null)&&(!found))
+		{
+
+			found=(cn.fen==root_fen)
+
+			if(!found) a+=cn.genTrueAlgeb
+
+			cn=cn.parent
+
+		}
+
+		if(!found) return null
+
+		a.reverse
+	}
+
 	def current_line_true_algeb_moves:ArrayBuffer[String]=
 	{
 		var a=ArrayBuffer[String]()
