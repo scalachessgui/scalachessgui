@@ -2072,7 +2072,9 @@ case class GEngine(
 			val truealgebline=g.current_line_true_algeb_moves
 			// difftruealgebline is like trualgebline, just from the last analyzed position stored in root_fen
 			// if the current position cannot be tracked back to root_fen, then it is null
-			val difftruealgebline=g.diff_true_algeb_moves(root_fen)
+			var difftruealgebline=g.diff_true_algeb_moves(root_fen)
+
+			difftruealgebline=null
 
 			val fen=g.report_fen
 
