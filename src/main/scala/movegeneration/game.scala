@@ -39,7 +39,7 @@ case class gameNode(
 	num_checks:Map[TColor,Int]=Map(WHITE->0,BLACK->0),
 	genAlgeb:String="",
 	genTrueAlgeb:String="",
-	comment:String=""
+	var comment:String=""
 	)
 {
 
@@ -1352,6 +1352,22 @@ class game
 		parse_pgn(pgn)
 	}
 
+	def BeginsWith(str:String,what:Character):Boolean=
+	{
+		if(str==null) return false
+		if(str.length==0) return false
+		if(str(0)==what) return true
+		false
+	}
+
+	def EndsWith(str:String,what:Character):Boolean=
+	{
+		if(str==null) return false
+		if(str.length==0) return false
+		if(str(str.length-1)==what) return true
+		false
+	}
+
 	def parse_pgn(set_pgn:String,head_only:Boolean=false)
 	{
 
@@ -1464,26 +1480,19 @@ class game
 		if(handles.contains(Black)) flip=true
 		if(handles.contains(White)) flip=false
 
-		//println("move list _"+move_list+"_")
-		move_list=move_list.replaceAll("[\r\n]"," ")
-		//println("move list _"+move_list+"_")
-		move_list=move_list.replaceAll("\\{[^\\}]*\\}","")
-		//println("move list _"+move_list+"_")
-		move_list=move_list.replaceAll("[0-9]+\\."," ")
-		//println("move list _"+move_list+"_")
-		move_list=move_list.replaceAll("\\.+"," ")
-		//println("move list _"+move_list+"_")
+		move_list=move_list.replaceAll("[\r\n]"," ")		
 		move_list=move_list.replaceAll(" +"," ")
-		//println("move list _"+move_list+"_")
 		move_list=move_list.replaceAll("^ | $","")
-		//println("move list _"+move_list+"_")
 		move_list=move_list.replaceAll("\\( ","(")
-		//println("move list _"+move_list+"_")
 		move_list=move_list.replaceAll(" \\)",")")
-		//println("move list _"+move_list+"_")
 		move_list=move_list.replaceAll("\\)\\)",") )")
+		move_list=move_list.replaceAll("\\}\\)","} )")
 
 		var moves=move_list.split(" ")
+
+		var commentbuff=""
+
+		var previouswasmove=false
 
 		def parse_moves_recursive()
 		{
@@ -1500,58 +1509,86 @@ class game
 				if(move.length>0)
 				{
 
-					var open_sub=false
-
-					var close_sub=false
-
-					if(move(0)=='(')
+					if(BeginsWith(move,'{'))
 					{
-						open_sub=true
-						move=move.substring(1)
+						commentbuff=move
 					}
-
-					if(move(move.length-1)==')')
+					else if(commentbuff!="")
 					{
-						close_sub=true
-						move=move.substring(0,move.length-1)
-					}
-
-					if(open_sub)
-					{
-						//println("open sub "+move)
-						val save_current_node=current_node
-						back
-						val m=b.sanToMove(move)
-						if(m!=null)
+						commentbuff+=" "+move
+						if(EndsWith(move,'}'))
 						{
-							makeMove(m)
+							commentbuff=commentbuff.replaceAll("^\\{|\\}$","")
+							if(previouswasmove)
+							{
+								current_node.comment=commentbuff
+							}
+							commentbuff=""
+							previouswasmove=false
 						}
-						parse_moves_recursive()
-						current_node=save_current_node
-						b.set_from_fen(current_node.fen)
-						pos_changed
 					}
 					else
 					{
-						val m=b.sanToMove(move)
 
-						//println(b.toPrintable)
+						var open_sub=false
 
-						if(m!=null)
+						var close_sub=false
+
+						if(move(0)=='(')
 						{
-							//println("make "+move+" "+m.toAlgeb)
-							makeMove(m)
+							open_sub=true
+							move=move.substring(1)
+						}
+
+						if(move(move.length-1)==')')
+						{
+							close_sub=true
+							move=move.substring(0,move.length-1)
+						}
+
+						if(open_sub)
+						{
+							//println("open sub "+move)
+							val save_current_node=current_node
+							back
+							val m=b.sanToMove(move)
+							if(m!=null)
+							{
+								makeMove(m)
+								previouswasmove=true
+							} else {
+								previouswasmove=false
+							}
+							parse_moves_recursive()
+							current_node=save_current_node
+							b.set_from_fen(current_node.fen)
+							pos_changed
 						}
 						else
 						{
-							//println("error "+move)
-						}
-					}
+							val m=b.sanToMove(move)
 
-					if(close_sub)
-					{
-						//println("sub done")
-						return
+							//println(b.toPrintable)
+
+							if(m!=null)
+							{
+								//println("make "+move+" "+m.toAlgeb)
+								makeMove(m)
+								previouswasmove=true
+							}
+							else
+							{								
+								//println("error "+move)
+								previouswasmove=false
+							}
+						}
+
+						if(close_sub)
+						{
+							//println("sub done")
+							return
+						}
+
 					}
 
 				}
