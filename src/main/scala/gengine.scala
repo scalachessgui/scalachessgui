@@ -606,7 +606,7 @@ case class EngineGames(
 			val autoaddaborted=Builder.gcb("autoaddabortedenginegames",false)
 			val autoaddfinished=Builder.gcb("autoaddfinishedenginegames",false)
 			Platform.runLater(new Runnable{def run{
-				SystemMessage.Show("Closing engine game","Please wait.",id="waitenginegameclosedialog")
+				SystemMessage.Show("Closing engine game","Closing engine game.",comment="Please wait.",id="waitenginegameclosedialog")
 			}})
 			try{Thread.sleep(5000)}catch{case e:Throwable=>{}}
 			Platform.runLater(new Runnable{def run{
@@ -881,6 +881,11 @@ case class GEngine(
 			{
 				IssueConsoleEngineCommand
 			}
+
+			if(ev.id==s"$pathid#setpreferredsize")
+			{
+				SetPreferredSize
+			}
 		}
 
 		if(ev.kind=="textfield entered")
@@ -898,6 +903,17 @@ case class GEngine(
 		val command=etext.getText
 		etext.setText("")
 		IssueCommand(command)
+	}
+
+	def SetPreferredSize
+	{
+		if(Builder.stages.contains(pathid))
+		{
+			Builder.stages(pathid).setWidth(640.0)
+			Builder.stages(pathid).setHeight(730.0)
+			Builder.stages(pathid).setY(10.0)
+			return
+		}	
 	}
 
 	def CloseConsole
@@ -934,7 +950,7 @@ case class GEngine(
 			|<scrollpane>
 			|<tabpane>
 			|<tab caption="Search output">
-			|<scrollpane id="engineoutscrollpane" width="800">
+			|<scrollpane id="engineoutscrollpane" width="600" height="645">
 			|<webview id="$pathid#engineouttext" height="3000" width="3000"/>
 			|</scrollpane>
 			|</tab>
@@ -943,14 +959,15 @@ case class GEngine(
 			|<hbox padding="5" gap="5">
 			|<textfield style="-fx-font-size: 18px; -fx-text-fill: #00007f;" id="$pathid#enginecommand"/>
 			|<button id="$pathid#issueenginecommand" text="Issue" style="round"/>
+			|<button id="$pathid#setpreferredsize" text="Set preferred size" />
 			|</hbox>
-			|<scrollpane id="engineconsolescrollpane" width="800">
+			|<scrollpane id="engineconsolescrollpane" width="600" height="600">
 			|<webview id="$pathid#engineconsoletext" height="3000" width="3000"/>
 			|</scrollpane>
 			|</vbox>
 			|</tab>
 			|<tab caption="Settings">
-			|<scrollpane id="enginesettingsscrollpane" width="800">
+			|<scrollpane id="enginesettingsscrollpane" width="600" height="645">
 			|<vbox id="$pathid#enginesettingsvbox" height="3000" width="3000"/>
 			|</scrollpane>
 			|</tab>
@@ -1216,6 +1233,10 @@ case class GEngine(
 		def InitOptions
 		{
 			Add(Option(name="Reset defaults",kind="button"))
+		}
+
+		def AddDefaultOptions
+		{
 			Add(Option(name="Auto set FEN",kind="check",defaultstr="true",send=false))
 			Add(Option(name="Command after set FEN",kind="string",defaultstr="",send=false))
 			Add(Option(name="Auto start",kind="check",defaultstr="true",send=false))
@@ -1234,6 +1255,7 @@ case class GEngine(
 
 		def ApplyAll
 		{
+			AddDefaultOptions
 			for(option<-options) option.Apply()
 		}
 
@@ -1392,7 +1414,7 @@ case class GEngine(
 		if(svbox==null) return
 		val optionscontent=options.ReportXML
 		val blob=s"""
-			|<vbox padding="3" gap="3">
+			|<vbox padding="3" gap="3" width="600.0" height="625.0">
 			|$optionscontent
 			|</vbox>
 		""".stripMargin

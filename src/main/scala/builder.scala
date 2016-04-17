@@ -677,6 +677,16 @@ object Builder
 			s.show()
 		}
 
+		def setX(w:Double)
+		{
+			s.setX(w)
+		}
+
+		def setY(w:Double)
+		{
+			s.setY(w)
+		}
+
 		def setWidth(w:Double)
 		{
 			s.setWidth(w)
