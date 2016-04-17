@@ -459,6 +459,7 @@ class game
 
 		val san=b.toSan(m)
 		val algeb=m.toAlgeb
+		val true_algeb=b.to_true_algeb(algeb)
 
 		if(san!=null)
 		{
@@ -479,7 +480,7 @@ class game
 						turn=colorLetterOf(b.turn),
 						num_checks=Map(WHITE->b.num_checks(WHITE),BLACK->b.num_checks(BLACK)),
 						genAlgeb=algeb,
-						genTrueAlgeb=b.to_true_algeb(algeb),
+						genTrueAlgeb=true_algeb,
 						comment=addcomment
 					)
 				current_node.childs+=(san->newNode)

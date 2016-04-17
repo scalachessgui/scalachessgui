@@ -127,6 +127,7 @@
 						<hbox padding="5" gap="5">
 							<label text="MultiPV"/>
 							<combo id="multipvcombo"/>
+							<button id="applymultipv" text="Apply" />
 							<combo id="enginescombo"/>
 						</hbox>
 						<scrollpane id="enginescrollpane" width="$panewidth">

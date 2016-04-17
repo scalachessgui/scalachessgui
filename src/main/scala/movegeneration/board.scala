@@ -234,14 +234,14 @@ class board
 		val whitekingalgeb=toAlgeb(whereIsKing(WHITE))
 		if(whitekingalgeb=="e1")
 		{
-			if(algeb=="e1c1") return "e1a1"
-			if(algeb=="e1g1") return "e1h1"
+			if(algeb=="e1a1") return "e1c1"
+			if(algeb=="e1h1") return "e1g1"
 		}
 		val blackkingalgeb=toAlgeb(whereIsKing(BLACK))
 		if(blackkingalgeb=="e8")
 		{
-			if(algeb=="e8c8") return "e8a8"
-			if(algeb=="e8g8") return "e8h8"
+			if(algeb=="e8a8") return "e8c8"
+			if(algeb=="e8h8") return "e8g8"
 		}		
 		return algeb
 	}

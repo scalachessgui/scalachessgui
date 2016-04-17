@@ -862,11 +862,18 @@ case class GEngine(
 
 		multipv=set_multipv
 
-		if(protocol=="UCI")
+		if(options.hasmultipv)
 		{
 			val wasrunning=running
 			if(running) Stop
-			IssueCommand("setoption name MultiPV value "+multipv)
+			if(protocol=="UCI")
+			{
+				IssueCommand("setoption name MultiPV value "+multipv)
+			}
+			if(protocol=="XBOARD")
+			{
+				IssueCommand("option MultiPV="+multipv)
+			}
 			if(wasrunning) Start(g)
 		}
 	}
@@ -1228,6 +1235,10 @@ case class GEngine(
 	case class Options(var options:List[Option]=List[Option]())
 	{
 
+		var hasmultipv=false
+		var minmultipv=1
+		var maxmultipv=1
+
 		InitOptions
 
 		def InitOptions
@@ -1244,6 +1255,12 @@ case class GEngine(
 
 		def Add(o:Option)
 		{
+			if(o.name=="MultiPV")
+			{
+				hasmultipv=true
+				minmultipv=o.minstr.toInt
+				maxmultipv=o.maxstr.toInt
+			}
 			options=options:+o
 		}
 

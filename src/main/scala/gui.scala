@@ -591,6 +591,16 @@ class GuiClass extends Application
 		SystemMessage.Hide(3000)
 	}
 
+	def change_multipv
+	{
+		val running=engine.engine_running
+		if(running) engine_stop
+
+		set_multipv(get_multipv)
+		
+		if(running) engine_start
+	}
+
 	def handler(ev:MyEvent)
 	{
 		Builder.default_handler(ev)
@@ -635,10 +645,7 @@ class GuiClass extends Application
 
 			if(ev.id=="multipvcombo")
 			{
-				val running=engine.engine_running
-				if(running) engine_stop
-				set_multipv(get_multipv)
-				if(running) engine_start
+				change_multipv
 			}
 
 			if(ev.id=="selectvariantcombo")
@@ -922,6 +929,11 @@ class GuiClass extends Application
 
 		if(ev.kind=="button pressed")
 		{
+
+			if(ev.id=="applymultipv")
+			{
+				change_multipv
+			}
 
 			if(ev.id=="issueenginecommand")
 			{
@@ -1335,7 +1347,10 @@ class GuiClass extends Application
 
 		enginelist.StartAll(commands.g)
 
-		selecttab("Engine")
+		if(engine.engine_running)
+		{
+			selecttab("Engine")
+		}
 	}
 
 	def engine_stop()
