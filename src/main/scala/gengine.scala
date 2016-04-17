@@ -509,9 +509,9 @@ case class EngineGames(
 
 					bestmove=onturn.bestmove
 
-					val true_algeb=commands.g.b.to_true_algeb(bestmove)
+					val chess960_algeb=commands.g.b.to_chess960_algeb(bestmove)
 
-					val m=move(fromalgeb=true_algeb)
+					val m=move(fromalgeb=chess960_algeb)
 
 					var scorecp="%.2f".format(scorenumerical.toDouble/100.0)
 					scorecp=scorecp.replaceAll(",",".")
