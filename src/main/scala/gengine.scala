@@ -2140,7 +2140,8 @@ case class GEngine(
 					return
 				}
 				
-				if(g.is_from_startpos)
+				//if(g.is_from_startpos)
+				if(false)
 				{
 					IssueCommand("new")
 					IssueCommand("force")
