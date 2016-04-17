@@ -795,12 +795,15 @@ class game
 
 				var style="padding: 4px;"
 
+				var action=""
+
 				if(cn==sannode)
 				{
 					style="background-color: #cfffcf; border-style: solid; border-width: 1px; border-color: #000000; border-radius: 10px; padding: 3px;"
+					action="editcomment"
 				}
 
-				pgn+=s""" <span id="san$index" onmousedown="x='$index';" style="$style">$addsan</span> """
+				pgn+=s""" <span id="san$index" onmousedown="x='$index';action='$action';" style="$style">$addsan</span> """
 
 				if(is_sub) report_pgn_recursive(gn.childs(san),true,level+1)
 
@@ -917,6 +920,7 @@ class game
 			|<script>
 			|var x="";
 			|var field="";
+			|var action="";
 			|</script>
 			|<div style="font-family: monospace; font-size: 28px; font-weight: bold;">
 			|<table cellpadding="0" cellspacing="0">

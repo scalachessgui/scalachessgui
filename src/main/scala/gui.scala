@@ -703,7 +703,26 @@ class GuiClass extends Application
 
 						val gn=commands.g.html_pgn_nodes(index)
 
-	            		commands.g.tonode(gn)
+						val action=Builder.getwebe("colorpgntext").executeScript("action").toString()
+
+						if(action=="editcomment")
+						{
+							val comment=gn.comment
+							val blob=s"""
+								|<vbox padding="5" gap="5">
+								|<label text="Comment:"/>
+								|<textfield style="-fx-font-size: 24px;" id="pgncomment" text="$comment" width="400"/>
+								|<button id="editpgncommentok" text="Apply changes"/>
+								|<button id="editpgncommentdel" text="Delete this comment"/>
+								|</vbox>
+							""".stripMargin
+							Builder.MyStage("editpgncomment",modal=true,set_handler=handler,title="Edit PGN comment",blob=blob)
+						}
+						else
+						{
+	            			commands.g.tonode(gn)
+						}
+
 
 	            		update
             		}
@@ -1072,6 +1091,20 @@ class GuiClass extends Application
 			if(ev.id=="dosavepgnas")
 			{
 				save_pgn_as
+			}
+
+			if((ev.id=="editpgncommentok")||(ev.id=="editpgncommentdel"))
+			{
+
+				var comment=Builder.gettext("pgncomment").getText
+
+				if(ev.id=="editpgncommentdel") comment=""
+
+				commands.g.current_node.comment=comment
+
+				Builder.stages("editpgncomment").close
+
+				update
 			}
 
 			if((ev.id=="editpgnok")||(ev.id=="editpgndel"))
