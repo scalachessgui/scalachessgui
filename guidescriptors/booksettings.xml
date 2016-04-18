@@ -1,9 +1,9 @@
-<vbox padding="5" gap="5">
-	<hbox padding="5" gap="5">
+<vbox padding="15" gap="5" style="-fx-font-size: 20px;">
+	<hbox padding="5" gap="15">
 		<label text="Auto add finished engine games"/>
 		<checkbox id="autoaddfinishedenginegames"/>
 	</hbox>
-	<hbox padding="5" gap="5">
+	<hbox padding="5" gap="15">
 		<label text="Auto add aborted engine games"/>
 		<checkbox id="autoaddabortedenginegames"/>
 	</hbox>

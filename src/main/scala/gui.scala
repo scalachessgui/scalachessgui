@@ -601,6 +601,42 @@ class GuiClass extends Application
 		if(running) engine_start
 	}
 
+	def edit_pgn(evid:String="editpgnok")
+	{
+		val field=Builder.gettext("pgnfieldname").getText
+
+		if(field!="")
+		{
+			if(evid=="editpgndel")
+			{
+				commands.g.pgn_headers-=field
+			}
+			else
+			{
+				val value=Builder.gettext("pgnfieldvalue").getText
+
+				commands.g.pgn_headers+=(field->value)
+			}
+
+			update
+		}
+
+		Builder.stages("editpgn").close
+	}
+
+	def edit_pgn_comment(evid:String="editpgncommentok")
+	{
+		var comment=Builder.gettext("pgncomment").getText
+
+		if(evid=="editpgncommentdel") comment=""
+
+		commands.g.current_node.comment=comment
+
+		Builder.stages("editpgncomment").close
+
+		update
+	}
+
 	def handler(ev:MyEvent)
 	{
 		Builder.default_handler(ev)
@@ -716,10 +752,10 @@ class GuiClass extends Application
 						{
 							val comment=gn.comment
 							val blob=s"""
-								|<vbox padding="5" gap="5">
+								|<vbox padding="15" gap="5">
 								|<label text="Comment:"/>
 								|<textfield style="-fx-font-size: 24px;" id="pgncomment" text="$comment" width="400"/>
-								|<button id="editpgncommentok" text="Apply changes"/>
+								|<button style="-fx-font-size: 24px;" id="editpgncommentok" width="400" text="Apply changes"/>
 								|<button id="editpgncommentdel" text="Delete this comment"/>
 								|</vbox>
 							""".stripMargin
@@ -925,6 +961,16 @@ class GuiClass extends Application
 			{
 				IssueEngineCommand
 			}
+
+			if(ev.id=="pgncomment")
+			{
+				edit_pgn_comment()
+			}
+
+			if((ev.id=="pgnfieldname")||(ev.id=="pgnfieldvalue"))
+			{
+				edit_pgn()
+			}
 		}
 
 		if(ev.kind=="button pressed")
@@ -1107,41 +1153,13 @@ class GuiClass extends Application
 
 			if((ev.id=="editpgncommentok")||(ev.id=="editpgncommentdel"))
 			{
-
-				var comment=Builder.gettext("pgncomment").getText
-
-				if(ev.id=="editpgncommentdel") comment=""
-
-				commands.g.current_node.comment=comment
-
-				Builder.stages("editpgncomment").close
-
-				update
+				edit_pgn_comment(ev.id)
 			}
 
 			if((ev.id=="editpgnok")||(ev.id=="editpgndel"))
 			{
-				val field=Builder.gettext("pgnfieldname").getText
-
-				if(field!="")
-				{
-					if(ev.id=="editpgndel")
-					{
-						commands.g.pgn_headers-=field
-					}
-					else
-					{
-						val value=Builder.gettext("pgnfieldvalue").getText
-
-						commands.g.pgn_headers+=(field->value)
-					}
-
-					update
-				}
-
-				Builder.stages("editpgn").close
+				edit_pgn(ev.id)
 			}
-
 
 			if(ev.id=="boardcontrolpanelflip")
 			{

@@ -115,14 +115,20 @@ case class bookEntry(
 	}
 }
 
-case class bookPosition(
-	var fen:String
-	)
+case class bookPosition()
 {
+
+	var fen:String=""
 
 	var entries=Map[String,bookEntry]()
 
 	var games=""
+
+	def FromFen(set_fen:String):bookPosition=
+	{
+		fen=Transp.mstrip(set_fen)
+		return this
+	}
 
 	def update_result(san:String,result:String)
 	{
@@ -353,12 +359,30 @@ case class bookPosition(
 
 }
 
-case class bookList(var fen:String)
+object Transp
 {
+	def mstrip(fen:String):String=
+	{
+		val parts=fen.split(" ")
+		if(parts.length<=4) return fen
+		parts(0)+" "+parts(1)+" "+parts(2)+" "+parts(3)
+	}
+}
+
+case class bookList()
+{
+
+	var fen:String=""
 
 	def name=encode(fen,true)
 
 	var books=Map[String,bookPosition]()
+
+	def FromFen(set_fen:String):bookList=
+	{
+		fen=Transp.mstrip(set_fen)
+		return this
+	}
 
 	def remove_book(name:String):Boolean=
 	{
@@ -395,7 +419,7 @@ case class bookList(var fen:String)
 
 		for(bookXml<-booksXml)
 		{
-			val bp=bookPosition("")
+			val bp=bookPosition()
 
 			val name=(bookXml \ "@name").text
 
@@ -420,20 +444,20 @@ case class book(
 
 	val path=pathlist.mkString("/")
 
-	var currentPos=bookPosition("")
+	var currentPos=bookPosition()
 
-	var booklist=bookList("")
+	var booklist=bookList()
 
 	var current_book="default"
 
 	def loadPos(fen:String,loadcurrent:Boolean=true)
 	{
 
-		booklist=bookList(fen)
+		booklist=bookList().FromFen(fen)
 
 		current_book=settings.get_current_book()
 
-		var p=bookPosition(fen)
+		var p=bookPosition().FromFen(fen)
 
 		val fullpath=path+"/"+booklist.name+".xml"
 

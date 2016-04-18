@@ -326,7 +326,7 @@ class game
 		}
 		else
 		{
-			book.currentPos=bookPosition(current_node.fen)
+			book.currentPos=bookPosition().FromFen(current_node.fen)
 		}
 	}
 
@@ -558,14 +558,19 @@ class game
 	def GetTermination:String=
 	{
 		var term=""
+
 		if(pgn_headers.contains("Result"))
 		{
 			term+=" "+pgn_headers("Result")
+		} else {
+			term+=" *"
 		}
+
 		if(pgn_headers.contains("Termination"))
 		{
 			term+=" {"+pgn_headers("Termination")+"}"
 		}
+
 		term
 	}
 
@@ -656,12 +661,7 @@ class game
 		if(HasMoves)
 		{
 			report_pgn_recursive(root,false)
-		}
-		else
-		{
-			pgn+="*"
-		}
-		
+		}		
 
 		pgn=pgn.replaceAll(" +"," ")
 		pgn=pgn.replaceAll(" +\\)",")")
@@ -865,10 +865,6 @@ class game
 		if(HasMoves)
 		{
 			report_pgn_recursive(root,false)
-		}
-		else
-		{
-			pgn+="*"
 		}
 
 		pgn=pgn.replaceAll(" +"," ")
