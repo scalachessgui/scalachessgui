@@ -1363,6 +1363,7 @@ case class GEngine(
 			{	
 				options.ResetAll
 				BuildOptions
+				return
 			}
 
 			val parts=buttonname.split("!").toList
