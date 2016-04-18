@@ -1481,13 +1481,26 @@ class game
 		if(handles.contains(Black)) flip=true
 		if(handles.contains(White)) flip=false
 
-		move_list=move_list.replaceAll("[\r\n]"," ")		
+		// convert white spaces to space
+		move_list=move_list.replaceAll("[\r\n\t]"," ")
+
+		// separate comments
+		move_list=move_list.replaceAll("\\}","} ")
+		move_list=move_list.replaceAll("\\{"," {")
+
+		// replace multiple spaces with single space
 		move_list=move_list.replaceAll(" +"," ")
+		// remove leading and trailing spaces
 		move_list=move_list.replaceAll("^ | $","")
+
+		// variation opening joined with move
 		move_list=move_list.replaceAll("\\( ","(")
+		// variation closing joined with move
 		move_list=move_list.replaceAll(" \\)",")")
+		// separate multiple closings
 		move_list=move_list.replaceAll("\\)\\)",") )")
-		move_list=move_list.replaceAll("\\}\\)","} )")
+
+		println(move_list)
 
 		var moves=move_list.split(" ")
 
@@ -1510,38 +1523,48 @@ class game
 				if(move.length>0)
 				{
 
+					def addcomment
+					{
+						commentbuff=commentbuff.replaceAll("^\\{|\\}$","")
+						if(previouswasmove)
+						{
+							current_node.comment=commentbuff
+						}
+						commentbuff=""
+						previouswasmove=false
+					}
+
 					if(BeginsWith(move,'{'))
 					{
 						commentbuff=move
+						if(EndsWith(move,'}')) addcomment
+					}
+					else if(EndsWith(move,'}'))
+					{
+						commentbuff+=" "+move
+						addcomment
 					}
 					else if(commentbuff!="")
 					{
 						commentbuff+=" "+move
-						if(EndsWith(move,'}'))
-						{
-							commentbuff=commentbuff.replaceAll("^\\{|\\}$","")
-							if(previouswasmove)
-							{
-								current_node.comment=commentbuff
-							}
-							commentbuff=""
-							previouswasmove=false
-						}
 					}
 					else
 					{
+
+						// remove line numbers, dots from moves
+						move=move.replaceAll("^[0-9]*[\\.]*","")
 
 						var open_sub=false
 
 						var close_sub=false
 
-						if(move(0)=='(')
+						if(BeginsWith(move,'('))
 						{
 							open_sub=true
 							move=move.substring(1)
 						}
 
-						if(move(move.length-1)==')')
+						if(EndsWith(move,')'))
 						{
 							close_sub=true
 							move=move.substring(0,move.length-1)

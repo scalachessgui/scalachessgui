@@ -864,6 +864,8 @@ case class GEngine(
 
 		if(options.hasmultipv)
 		{
+			if(multipv< options.minmultipv) return
+			if(multipv> options.maxmultipv) return
 			val wasrunning=running
 			if(running) Stop
 			if(protocol=="UCI")
@@ -957,8 +959,8 @@ case class GEngine(
 			|<scrollpane>
 			|<tabpane>
 			|<tab caption="Search output">
-			|<scrollpane id="engineoutscrollpane" width="600" height="645">
-			|<webview id="$pathid#engineouttext" height="3000" width="3000"/>
+			|<scrollpane id="engineoutscrollpane" width="600.0" height="645.0">
+			|<webview id="$pathid#engineouttext" height="3000.0" width="3000.0"/>
 			|</scrollpane>
 			|</tab>
 			|<tab caption="Console">
@@ -968,14 +970,14 @@ case class GEngine(
 			|<button id="$pathid#issueenginecommand" text="Issue" style="round"/>
 			|<button id="$pathid#setpreferredsize" text="Set preferred size" />
 			|</hbox>
-			|<scrollpane id="engineconsolescrollpane" width="600" height="600">
-			|<webview id="$pathid#engineconsoletext" height="3000" width="3000"/>
+			|<scrollpane id="engineconsolescrollpane" width="600.0" height="600.0">
+			|<webview id="$pathid#engineconsoletext" height="3000.0" width="3000.0"/>
 			|</scrollpane>
 			|</vbox>
 			|</tab>
 			|<tab caption="Settings">
-			|<scrollpane id="enginesettingsscrollpane" width="600" height="645">
-			|<vbox id="$pathid#enginesettingsvbox" height="3000" width="3000"/>
+			|<scrollpane id="enginesettingsscrollpane" width="600.0" height="645.0">
+			|<vbox id="$pathid#enginesettingsvbox" height="3000.0" width="3000.0"/>
 			|</scrollpane>
 			|</tab>
 			|</tabpane>
@@ -1056,9 +1058,15 @@ case class GEngine(
 		var subkind:String=""
 	)
 	{
+		def dosend:Boolean=
+		{
+			if(kind=="separator") return false
+			send
+		}
+
 		def Apply(reset:Boolean=false)
 		{
-			if((kind!="button")&&(send==true))
+			if((kind!="button")&&(dosend==true))
 			{
 				val id=s"engineoptions#$pathid#$name"
 
@@ -1135,7 +1143,7 @@ case class GEngine(
 			return this
 		}
 
-		def ReportXML:String=
+		def ReportXML(i:Int):String=
 		{
 			var td1=""
 			var td2=""
@@ -1193,15 +1201,24 @@ case class GEngine(
 				|<slider width="300.0" id="$id" usevariantentry="true" min="$minstr" max="$maxstr" majortickunit="$unit" showticklabels="true"/>
 				""".stripMargin
 				td3=s"""
-				|<textfield id="$id!text" usevariantentry="true" text="$intvalue"/>
+				|<textfield id="$id!text" usevariantentry="true" text="$intvalue" width="100.0" />
 				""".stripMargin
 			}
+			if(kind=="separator")
+			{
+				td1=s"""
+					|<hbox width="600.0" height="1.0" style="-fx-border-style:solid; -fx-border-width: 1px;" cs="3" />
+				""".stripMargin
+			}
+			def tdrc(td:String,c:Int):String=
+			{
+				td.replaceAll(".>",s""" r="$i" c="$c" />""")
+			}
+			td1=tdrc(td1,1); td2=tdrc(td2,2); td3=tdrc(td3,3);
 			s"""
-				|<hbox padding="3" gap="3">
 				|$td1
 				|$td2
 				|$td3
-				|</hbox>
 			""".stripMargin
 		}
 	}
@@ -1244,10 +1261,12 @@ case class GEngine(
 		def InitOptions
 		{
 			Add(Option(name="Reset defaults",kind="button"))
+			Add(Option(kind="separator"))
 		}
 
 		def AddDefaultOptions
 		{
+			Add(Option(kind="separator"))
 			Add(Option(name="Auto set FEN",kind="check",defaultstr="true",send=false))
 			Add(Option(name="Command after set FEN",kind="string",defaultstr="",send=false))
 			Add(Option(name="Auto start",kind="check",defaultstr="true",send=false))
@@ -1257,6 +1276,8 @@ case class GEngine(
 		{
 			if(o.name=="MultiPV")
 			{
+				if(!IsInt(o.minstr)) return
+				if(!IsInt(o.maxstr)) return
 				hasmultipv=true
 				minmultipv=o.minstr.toInt
 				maxmultipv=o.maxstr.toInt
@@ -1266,7 +1287,8 @@ case class GEngine(
 
 		def ReportXML:String=
 		{
-			val content=(for(option<-options) yield option.ReportXML).mkString("\n")
+			var i=0;
+			val content=(for(option<-options) yield { i+=1; option.ReportXML(i) }).mkString("\n")
 			content
 		}
 
@@ -1432,7 +1454,9 @@ case class GEngine(
 		val optionscontent=options.ReportXML
 		val blob=s"""
 			|<vbox padding="3" gap="3" width="600.0" height="625.0">
+			|<grid hgap="10" vgap="5">
 			|$optionscontent
+			|</grid>
 			|</vbox>
 		""".stripMargin
 		val scenegraph=Builder.build(s"$pathid#enginesettingsvboxscenegraph",options_handler,blob=blob)
@@ -2099,47 +2123,27 @@ case class GEngine(
 		val autosetfen=GetBoolOption("Auto set FEN",true)
 		val commandaftersetfen=GetOption("Command after set FEN","")
 		val autostart=GetBoolOption("Auto start",true)
+
 		def IssueCommandAfterSetFEN
 		{
 			if(commandaftersetfen!="") IssueCommand(commandaftersetfen)
 		}
+
 		if(protocol=="XBOARD")
 		{
 			// truealgebline is the line leading to the current position from the game root position
 			// in engine algebraic notation
 			// this is called 'true' to distinguish it from internally used Chess960 algebraic notation
 			val truealgebline=g.current_line_true_algeb_moves
-			// difftruealgebline is like trualgebline, just from the last analyzed position stored in root_fen
-			// if the current position cannot be tracked back to root_fen, then it is null
-			var difftruealgebline=g.diff_true_algeb_moves(root_fen)
-
-			difftruealgebline=null
 
 			val fen=g.report_fen
 
-			if(autosetfen&&autostart)
+			if(autosetfen)
 			{
 				IssueCommand("force")
 				IssueCommand("post")
 				IssueVariantXBOARD
 
-				if(difftruealgebline!=null)
-				{
-					// the position can be reached by making moves from the current position
-					for(truealgeb<-difftruealgebline)
-					{
-						IssueCommand(s"usermove $truealgeb")
-					}
-
-					IssueCommand("analyze")
-
-					root_fen=fen
-
-					running=true
-
-					return
-				}
-				
 				//if(g.is_from_startpos)
 				if(false)
 				{
@@ -2157,12 +2161,19 @@ case class GEngine(
 
 					IssueCommand(s"setboard $fen")
 				}
+
+				IssueCommandAfterSetFEN
+
+				if(autostart)
+				{
 				
-				IssueCommand("analyze")
+					IssueCommand("analyze")
 
-				root_fen=fen
+					root_fen=fen
 
-				running=true
+					running=true
+
+				}
 			}
 		}
 		if(protocol=="UCI")
@@ -2179,9 +2190,11 @@ case class GEngine(
 
 				if(autostart)
 				{
+
 					IssueCommand("go infinite")
 
 					running=true
+
 				}
 			}
 		}
