@@ -583,6 +583,68 @@ class GuiClass extends Application
 		def pairing_key:String=s"$white vs. $black"
 	}
 
+	case class Elos(
+		var elos:Map[String,Double]=Map[String,Double]()
+		)
+	{
+		def Update(item:EngineStatsItem)
+		{
+			// https://en.wikipedia.org/wiki/Elo_rating_system
+
+			var whiteelo=2500.0
+			if(elos.contains(item.white)) whiteelo=elos(item.white)
+
+			var blackelo=2500.0
+			if(elos.contains(item.black)) blackelo=elos(item.black)
+			
+			def ESCORE(A:Double,B:Double):Double=1.0/(1.0+scala.math.pow(10.0,(B-A)/400.0))
+
+			var scorewhite:Double=0.5
+			var scoreblack:Double=0.5
+
+			if(item.result=="1-0") { scorewhite=1.0; scoreblack=0.0 }
+			else if(item.result=="0-1") { scorewhite=0; scoreblack=1.0 }
+
+			val ESCOREW = ESCORE(whiteelo,blackelo)
+			val ESCOREB = ESCORE(blackelo,whiteelo)
+
+			val K=32.0
+
+			whiteelo=(whiteelo.toDouble+K*(scorewhite-ESCOREW))
+			blackelo=(blackelo.toDouble+K*(scoreblack-ESCOREB))
+
+			elos+=(item.white->whiteelo)
+			elos+=(item.black->blackelo)
+			
+		}
+
+		def ReportEloHTML(player:String,elo:Double):String=
+		{
+			val elof="%.2f".format(elo)
+			s"""
+				|<tr>
+				|<td><font size="4" color="#00007f">$player</font></td>
+				|<td><font size="5">$elof</font></td>
+				|</tr>
+			""".stripMargin
+		}
+
+		def ReportHTML:String=
+		{
+			val sortedkeys=elos.keys.toList.sortWith( elos(_) > elos(_) )
+			val eloscontent=(for(k<-sortedkeys) yield ReportEloHTML(k,elos(k))).mkString("\n")
+			s"""
+				|<table cellpadding="10" cellspacing="10" border="1">
+				|<tr>
+				|<td>Engine</td>
+				|<td>ELO</td>
+				|</tr>
+				|$eloscontent
+				|</table>
+			""".stripMargin
+		}
+	}
+
 	case class PairingStats(
 		var whitewins:Int=0,
 		var draw:Int=0,
@@ -631,6 +693,8 @@ class GuiClass extends Application
 			pstat.black=item.black
 			pstat.key=key
 			pairings+=(key->pstat)
+
+
 		}
 
 		def ReportHTML:String=
@@ -653,6 +717,7 @@ class GuiClass extends Application
 	def create_engine_game_stats
 	{
 		val stats=EngineStats()
+		val elos=Elos()
 		val dummy=new game
 		val gf=new File("enginegames.pgn")
 		if(gf.exists())
@@ -665,10 +730,12 @@ class GuiClass extends Application
 				val white=dummy.get_header("White")
 				val black=dummy.get_header("Black")
 				val result=dummy.get_header("Result")
-				stats.Add(EngineStatsItem(white,black,result))
+				val item=EngineStatsItem(white,black,result)
+				stats.Add(item)
+				elos.Update(item)
 			}			
 		}
-		Builder.setweb("enginegamestext",stats.ReportHTML)
+		Builder.setweb("enginegamestext",stats.ReportHTML+"<br><br>\n"+elos.ReportHTML)
 		selecttab("Engine games")
 	}
 
