@@ -21,6 +21,7 @@
 				<menuitem id="startenginegamefromcurrentposition" text="Start game from current position"></menuitem>
 				<menuitem id="abortenginegame" text="Abort game"></menuitem>
 				<menuitem id="enginegamesettings" text="Settings"></menuitem>
+				<menuitem id="enginegamestats" text="Create stats"></menuitem>
 			</menu>
 			<menu text="Book">
 				<menuitem id="addcurrentgametobook" text="Add current game to book"></menuitem>

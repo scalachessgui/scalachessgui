@@ -39,6 +39,7 @@ import settings._
 import components._
 import book._
 import piece._
+import game._
 
 import gui2.Engine
 import gui2.Robot
@@ -573,6 +574,104 @@ class GuiClass extends Application
 		incrementaloutervbox.setStyle(borderstyle)
 	}
 
+	case class EngineStatsItem(
+		white:String,
+		black:String,
+		result:String
+	)
+	{
+		def pairing_key:String=s"$white vs. $black"
+	}
+
+	case class PairingStats(
+		var whitewins:Int=0,
+		var draw:Int=0,
+		var blackwins:Int=0,
+		var white:String="",
+		var black:String="",
+		var key:String=""
+		)
+	{
+		def ReportHTML:String=
+		{
+			s"""
+				|<tr>
+				|<td>
+				|<font size="4" color="#007f00"><b>$white</b></font>
+				| vs. 
+				|<font size="4" color="#7f0000"><b>$black</b></font>
+				|</td>
+				|<td align="center"><font size="6" color="#007f00"><b>$whitewins</b></font></td>
+				|<td align="center"><font size="6" color="#00007f"><b>$draw</b></font></td>
+				|<td align="center"><font size="6" color="#7f0000"><b>$blackwins</b></font></td>
+				|</tr>
+			""".stripMargin
+		}
+	}
+
+	case class EngineStats(
+		var items:List[EngineStatsItem]=List[EngineStatsItem](),
+		var pairings:Map[String,PairingStats]=Map[String,PairingStats]()
+		)
+	{
+		def Add(item:EngineStatsItem)
+		{
+			items=items:+item
+
+			val key=item.pairing_key
+			var pstat=PairingStats()
+			if(pairings.contains(key))
+			{
+				pstat=pairings(key)
+			}
+			if(item.result=="1-0") pstat.whitewins+=1
+			else if(item.result=="1/2-1/2") pstat.draw+=1
+			else if(item.result=="0-1") pstat.blackwins+=1
+			pstat.white=item.white
+			pstat.black=item.black
+			pstat.key=key
+			pairings+=(key->pstat)
+		}
+
+		def ReportHTML:String=
+		{
+			val pairingscontent=(for((k,v)<-pairings) yield v.ReportHTML).mkString("\n")
+			s"""
+				|<table cellpadding="5" cellspacing="5" border="1">
+				|<tr>
+				|<td>Pairing</td>
+				|<td>White wins</td>
+				|<td>Draw</td>
+				|<td>Black wins</td>
+				|</tr>
+				|$pairingscontent
+				|</table>
+			""".stripMargin
+		}
+	}
+
+	def create_engine_game_stats
+	{
+		val stats=EngineStats()
+		val dummy=new game
+		val gf=new File("enginegames.pgn")
+		if(gf.exists())
+		{
+			val pgncontent=readFileToString(gf,null.asInstanceOf[String])
+			val pgns=dummy.split_pgn(pgncontent)
+			for(pgn<-pgns)
+			{
+				dummy.parse_pgn(pgn,head_only=true)
+				val white=dummy.get_header("White")
+				val black=dummy.get_header("Black")
+				val result=dummy.get_header("Result")
+				stats.Add(EngineStatsItem(white,black,result))
+			}			
+		}
+		Builder.setweb("enginegamestext",stats.ReportHTML)
+		selecttab("Engine games")
+	}
+
 	def addcurrentgametobook()
 	{
 		val book_enabled=Builder.gcb("bookenabled",true)
@@ -789,6 +888,11 @@ class GuiClass extends Application
 
 		if(ev.kind=="menuitem clicked")
 		{
+
+			if(ev.id=="enginegamestats")
+			{
+				create_engine_game_stats
+			}
 
 			if(ev.id=="addcurrentgametobook")
 			{
