@@ -874,7 +874,7 @@ class game
 	}
 
 	val PreferredPgnHeaders:List[String]=List("Event","Site","Date","Round","White","Black","Result","TimeControl",
-		"Time","TimeZone","Variant","FEN","Termination","Annotator","Opening","ECO")
+		"Time","TimeZone","Variant","FEN","Termination","Annotator","StartPosition","Opening","PlyCount","ECO")
 
 	def PgnHeaderSortFunc(a:String,b:String):Boolean=
 	{

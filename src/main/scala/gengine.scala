@@ -372,6 +372,9 @@ case class EngineGames(
 	var gamehistory=GameHistory()
 
 	var gameresult:GameResult=null
+	var plycount=0
+	var isthematic=false
+	var thematictype="From FEN"
 	var gameaborted:Boolean=false
 	var gamecantstart:String=""
 
@@ -405,15 +408,23 @@ case class EngineGames(
 		}
 
 		// remove any movelist, start from fen
+		isthematic=false
+		thematictype="From FEN"
 		val addopeningmoves=Builder.gcb("addopeningmovestothematicgames",false)
 		if((addopeningmoves)&&(commands.g.is_from_startpos))
 		{
 			val moves=commands.g.current_line_moves
 			commands.g.reset
 			for(move<-moves) commands.g.makeSanMove(move,addcomment="THEMATIC MOVE")
+			if(moves.length>0)
+			{
+				isthematic=true
+				thematictype="From Moves"
+			}
 		} else {
 			gamestartfen=commands.g.report_fen
 			commands.g.set_from_fen(gamestartfen)
+			isthematic=true
 		}
 
 		predeterminedopening=commands.g.GetOpening
@@ -441,6 +452,7 @@ case class EngineGames(
 
 		commands.g.pgn_headers+=("Round"->"1")
 		commands.g.pgn_headers+=("Annotator"->"Scalachessgui")
+		commands.g.pgn_headers+=("StartPosition"->(if(isthematic) s"Thematic ($thematictype)" else "Conventional (Standard)"))
 		commands.g.pgn_headers+=("Opening"->predeterminedopening)
 		commands.g.pgn_headers+=("ECO"->"?")
 
@@ -472,6 +484,7 @@ case class EngineGames(
 
 			gamehistory=GameHistory()
 			gameresult=null
+			plycount=0
 			var stepcnt=0
 			var currentmovesteps=0
 
@@ -529,6 +542,7 @@ case class EngineGames(
 					var comment=s"$scorecp/$depth $movetimeformatted"
 
 					commands.g.makeMove(m,addcomment=comment)
+					plycount+=1
 					gameresult=commands.g.report_result
 
 					if(gameresult!=null)
@@ -588,6 +602,7 @@ case class EngineGames(
 			gamerunning=false
 			val opening=commands.g.GetOpening
 			commands.g.pgn_headers+=(if(predeterminedopening=="*") ("Opening"->opening) else ("Opening"->predeterminedopening))
+			commands.g.pgn_headers+=("PlyCount"->(""+plycount))
 			if(gameresult==null)
 			{
 				gameaborted=true
