@@ -1,0 +1,6 @@
+<vbox padding="15" gap="5" style="-fx-font-size: 20px;">
+	<hbox padding="5" gap="15">
+		<label text="Add opening moves to thematic games"/>
+		<checkbox id="addopeningmovestothematicgames"/>
+	</hbox>	
+</vbox>

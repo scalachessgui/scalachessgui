@@ -1500,7 +1500,7 @@ class game
 		// separate multiple closings
 		move_list=move_list.replaceAll("\\)\\)",") )")
 
-		println(move_list)
+		//println(move_list)
 
 		var moves=move_list.split(" ")
 

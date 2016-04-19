@@ -404,9 +404,18 @@ case class EngineGames(
 		}
 
 		// remove any movelist, start from fen
-		gamestartfen=commands.g.report_fen
+		val addopeningmoves=Builder.gcb("addopeningmovestothematicgames",false)
+		if((addopeningmoves)&&(commands.g.is_from_startpos))
+		{
+			val moves=commands.g.current_line_moves
+			commands.g.reset
+			for(move<-moves) commands.g.makeSanMove(move,addcomment="THEMATIC MOVE")
+		} else {
+			gamestartfen=commands.g.report_fen
+			commands.g.set_from_fen(gamestartfen)
+		}
+
 		predeterminedopening=commands.g.GetOpening
-		commands.g.set_from_fen(gamestartfen)
 
 		commands.g.pgn_headers=Map[String,String]()
 

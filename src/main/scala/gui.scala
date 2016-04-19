@@ -800,6 +800,11 @@ class GuiClass extends Application
 				Builder.MyStage("booksettings",modal=true,set_handler=handler,do_size=false,title="Book settings")
 			}
 
+			if(ev.id=="enginegamesettings")
+			{
+				Builder.MyStage("enginegamesettings",modal=true,set_handler=handler,do_size=false,title="Engine game settings")
+			}
+
 			val rmatch="""random([0-9]+)""".r
 
 			ev.id match
