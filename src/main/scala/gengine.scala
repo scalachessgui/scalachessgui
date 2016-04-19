@@ -32,6 +32,7 @@ import collection.JavaConverters._
 
 import org.apache.commons.lang.time.DurationFormatUtils.formatDuration
 import org.apache.commons.lang.time.DateFormatUtils._
+import org.apache.commons.io.FileUtils._
 
 import java.util.Date
 
@@ -621,6 +622,15 @@ case class EngineGames(
 			Platform.runLater(new Runnable{def run{
 				SystemMessage.Hide(0,id="waitenginegameclosedialog")
 			}})
+			
+			val pgn=commands.g.report_pgn+"\n\n\n"
+			if(!gameaborted)
+			{
+				writeStringToFile(new File("enginegames.pgn"),pgn,null.asInstanceOf[java.nio.charset.Charset],true)
+			} else {
+				writeStringToFile(new File("abortedenginegames.pgn"),pgn,null.asInstanceOf[java.nio.charset.Charset],true)
+			}
+
 			if(gameaborted)
 			{
 				if(autoaddaborted)

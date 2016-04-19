@@ -1,4 +1,6 @@
 
+del *.pgn
+
 rem del guidescriptors\values.xml
 
 call rda pgns
