@@ -147,9 +147,9 @@ object commands
 		{
 			val san=tokens(1)
 			val annot=tokens(2)
-			val algeb=tokens(3)
+			val uci=tokens(3)
 
-			g.book.currentPos.annot(san,annot,algeb)
+			g.book.currentPos.annot(san,annot,uci)
 			g.book.savePos()
 		}
 		else if(command=="del")
