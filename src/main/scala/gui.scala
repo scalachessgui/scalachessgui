@@ -444,10 +444,11 @@ class GuiClass extends Application
 		val key=Builder.getwebe("booktext").executeScript("key").toString()
 		val action=Builder.getwebe("booktext").executeScript("action").toString()
 		val param=Builder.getwebe("booktext").executeScript("param").toString()
+		val uci=Builder.getwebe("booktext").executeScript("uci").toString()
 
 		if(action=="annot")
 		{
-			commands.exec(s"a $key $param")
+			commands.exec(s"a $key $param $uci")
 			update_book_text
 		}
 		else if(action=="make")
@@ -463,11 +464,13 @@ class GuiClass extends Application
 		else if(action=="comment")
 		{
 			commentedsan=key
+			commenteduci=uci
 			Builder.MyStage("bookcomment",modal=true,set_handler=handler,title="Add book comment")			
 		}
 	}
 
 	var commentedsan:String=""
+	var commenteduci:String=""
 
 	def gen_random(num:Int)
 	{
@@ -1120,7 +1123,7 @@ class GuiClass extends Application
 
 				if(sel!="")
 				{
-					commands.g.book.currentPos.comment(commentedsan,sel)
+					commands.g.book.currentPos.comment(commentedsan,sel,commenteduci)
 					commands.g.book.savePos()
 
 					update

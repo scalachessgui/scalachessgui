@@ -87,7 +87,8 @@ case class bookEntry(
 	var wins:Int=0,
 	var draws:Int=0,
 	var losses:Int=0,
-	var comment:String="-"
+	var comment:String="-",
+	var uci:String="-"
 	)
 {
 	def toXml=
@@ -99,6 +100,7 @@ case class bookEntry(
 		<draws>{draws}</draws>
 		<losses>{losses}</losses>
 		<comment>{comment}</comment>
+		<uci>{uci}</uci>
 		</move>
 	}
 
@@ -112,6 +114,7 @@ case class bookEntry(
 		draws=parseXml[Int](move \ "draws",0)
 		losses=parseXml[Int](move \ "losses",0)
 		comment=parseXmlStr(move \ "comment","-")
+		uci=parseXmlStr(move \ "uci","-")
 	}
 }
 
@@ -130,7 +133,7 @@ case class bookPosition()
 		return this
 	}
 
-	def update_result(san:String,result:String)
+	def update_result(san:String,result:String,uci:String)
 	{
 		val win=(result=="1-0")
 		val draw=(result=="1/2-1/2")
@@ -144,13 +147,13 @@ case class bookPosition()
 		}
 		else
 		{
-			if(win) entries+=(san->bookEntry(san=san,wins=1))
-			if(draw) entries+=(san->bookEntry(san=san,draws=1))
-			if(loss) entries+=(san->bookEntry(san=san,losses=1))
+			if(win) entries+=(san->bookEntry(san=san,wins=1,uci=uci))
+			if(draw) entries+=(san->bookEntry(san=san,draws=1,uci=uci))
+			if(loss) entries+=(san->bookEntry(san=san,losses=1,uci=uci))
 		}
 	}
 
-	def inc_move_count(san:String)
+	def inc_move_count(san:String,uci:String)
 	{
 		if(entries.contains(san))
 		{
@@ -158,11 +161,11 @@ case class bookPosition()
 		}
 		else
 		{
-			entries+=(san->bookEntry(san=san,plays=1))
+			entries+=(san->bookEntry(san=san,plays=1,uci=uci))
 		}
 	}
 
-	def annot(san:String,annot:String)
+	def annot(san:String,annot:String,uci:String)
 	{
 		if(entries.contains(san))
 		{
@@ -170,11 +173,11 @@ case class bookPosition()
 		}
 		else
 		{
-			entries+=(san->bookEntry(san=san,annot=annot))
+			entries+=(san->bookEntry(san=san,annot=annot,uci=uci))
 		}
 	}
 
-	def comment(san:String,comment:String)
+	def comment(san:String,comment:String,uci:String)
 	{
 		val col=Builder.gss("bookcommentbackgroundcolor")
 
@@ -184,7 +187,7 @@ case class bookPosition()
 		}
 		else
 		{
-			entries+=(san->bookEntry(san=san,comment=comment))
+			entries+=(san->bookEntry(san=san,comment=comment,uci=uci))
 		}
 	}
 
@@ -290,6 +293,7 @@ case class bookPosition()
 			val draws=entries(k).draws
 			val losses=entries(k).losses
 			val comment=entries(k).comment
+			val uci=entries(k).uci
 			val commentcol=Builder.gps("bookcommentprofile",comment,"bookcommentbackgroundcolor","#FFFFFF")
 
 			val col=settings.get_annot_color(annot)
@@ -298,7 +302,7 @@ case class bookPosition()
 			{
 				val acol=settings.get_annot_color(a)
 				s"""
-					|<td align="center" onmousedown="setclick('$k','annot','$a');">
+					|<td align="center" onmousedown="setclick('$k','annot','$a','$uci');">
 					|<font color="$acol" size="5">$a</font>
 					|</td>
 				""".stripMargin
@@ -306,7 +310,7 @@ case class bookPosition()
 
 			s"""
 				|<tr style="background-color: $commentcol;">
-				|<td align="center" onmousedown="setclick('$k','make','');">
+				|<td align="center" onmousedown="setclick('$k','make','','$uci');">
 				|<a name="dummy"></a>
 				|<a href="#dummy" style="text-decoration: none;">
 				|<font color="$col" size="6"><b>
@@ -320,8 +324,8 @@ case class bookPosition()
 				|$td<font color="#00007f" size="5"><b>$draws<b></font></td>
 				|$td<font color="#7f0000" size="5"><b>$losses<b></font></td>
 				|$annots
-				|$td<font color="#ff0000" size="5" onmousedown="setclick('$k','del','');">X</font></td>
-				|$td<font color="#000000" size="5" onmousedown="setclick('$k','comment','');">$comment</font></td>
+				|$td<font color="#ff0000" size="5" onmousedown="setclick('$k','del','','$uci');">X</font></td>
+				|$td<font color="#000000" size="5" onmousedown="setclick('$k','comment','','$uci');">$comment</font></td>
 				|</tr>
 			""".stripMargin
 			}).mkString("\n")
@@ -333,11 +337,13 @@ case class bookPosition()
 			|var key="";
 			|var action="";
 			|var param="";
-			|function setclick(setkey,setaction,setparam)
+			|var uci="";
+			|function setclick(setkey,setaction,setparam,setuci)
 			|{
 			|	key=setkey;
 			|	action=setaction;
 			|	param=setparam;
+			|	uci=setuci;
 			|}
 			|</script>
 			|<table border="0" cellpadding="3" cellspacing="3" style="border-collapse: collapse;">

@@ -493,7 +493,7 @@ class game
 			{
 				//if(!(BUILDING&&game_found))
 				{
-					book.currentPos.inc_move_count(san)
+					book.currentPos.inc_move_count(san,true_algeb)
 				}
 				
 			}
@@ -504,7 +504,7 @@ class game
 				{
 					if(pgn_headers.contains("Result"))
 					{
-						book.currentPos.update_result(san,pgn_headers("Result"))
+						book.currentPos.update_result(san,pgn_headers("Result"),true_algeb)
 					}
 				}
 			}
