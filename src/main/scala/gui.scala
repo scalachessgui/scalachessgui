@@ -591,10 +591,12 @@ class GuiClass extends Application
 		{
 			// https://en.wikipedia.org/wiki/Elo_rating_system
 
-			var whiteelo=2500.0
+			val BASE_ELO=2800.0
+
+			var whiteelo=BASE_ELO
 			if(elos.contains(item.white)) whiteelo=elos(item.white)
 
-			var blackelo=2500.0
+			var blackelo=BASE_ELO
 			if(elos.contains(item.black)) blackelo=elos(item.black)
 			
 			def ESCORE(A:Double,B:Double):Double=1.0/(1.0+scala.math.pow(10.0,(B-A)/400.0))

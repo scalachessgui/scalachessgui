@@ -1,0 +1,6 @@
+<preprocesspgn>
+	<replaceall>
+		<regexp>Variant "atomic"</regexp>
+		<replacement>Variant "Atomic"</replacement>
+	</replaceall>
+</preprocesspgn>

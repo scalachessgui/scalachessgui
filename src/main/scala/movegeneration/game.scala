@@ -1369,6 +1369,20 @@ class game
 		false
 	}
 
+	def preprocess_pgn(set_pgn:String):String=
+	{
+		var pgn=set_pgn
+		val xml=scala.xml.XML.loadFile("guidescriptors"+File.separator+"preprocesspgn.xml")
+		val replacealls=xml \ "replaceall"
+		for(replaceall<-replacealls)
+		{
+			val regexp=(replaceall \ "regexp").text
+			val replacement=(replaceall \ "replacement").text
+			pgn=pgn.replaceAll(regexp,replacement)
+		}
+		pgn
+	}
+
 	def parse_pgn(set_pgn:String,head_only:Boolean=false)
 	{
 
@@ -1382,6 +1396,8 @@ class game
 		var status=READING_HEAD
 
 		var pgn=set_pgn
+
+		pgn=preprocess_pgn(pgn)
 
 		pgn=pgn.replaceAll("\r\n","\n")
 		pgn=pgn.replaceAll("\r","")
