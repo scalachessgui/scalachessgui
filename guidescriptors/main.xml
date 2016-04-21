@@ -23,6 +23,14 @@
 				<menuitem id="enginegamesettings" text="Settings"></menuitem>
 				<menuitem id="enginegamestats" text="Create stats"></menuitem>
 			</menu>
+			<menu text="Scheduler">
+				<menuitem id="schedulerselectengines" text="Select engines"></menuitem>
+				<menuitem id="schedulergamesetup" text="Game setup"></menuitem>
+				<menuitem id="schedulercreateschedule" text="Create schedule"></menuitem>
+				<menuitem id="schedulershow" text="Show"></menuitem>
+				<menuitem id="schedulerstart" text="Start"></menuitem>
+				<menuitem id="schedulerstop" text="Stop"></menuitem>
+			</menu>
 			<menu text="Book">
 				<menuitem id="addcurrentgametobook" text="Add current game to book"></menuitem>
 				<menuitem id="booksettings" text="Settings"></menuitem>

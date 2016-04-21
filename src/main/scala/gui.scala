@@ -53,6 +53,8 @@ class GuiClass extends Application
 
 	var enginelist:GEngineList=null
 
+	var scheduler:Scheduler=null
+
 	var enginegames=EngineGames(DisableBoardControls,EnableBoardControls,GetEngineList,GuiUpdate,addcurrentgametobook)
 
 	def getpanewidth=Builder.gsd("panewidth",750.0)
@@ -130,6 +132,11 @@ class GuiClass extends Application
 		if(i< 0) return
 
 		tablist._2.getSelectionModel().select(i)
+	}
+
+	def SelectEngineGamesTab()
+	{
+		selecttab("Engine games")
 	}
 
 	def choose_pgn_file:File=
@@ -874,7 +881,7 @@ class GuiClass extends Application
 				}
 				if(command=="start")
 				{
-					ResetGame
+					if(!SchedulerGlobals.running) ResetGame
 					enginegames.StartGame(fromposition=false)
 				}
 				if(command=="startfrompos")
@@ -960,6 +967,36 @@ class GuiClass extends Application
 
 		if(ev.kind=="menuitem clicked")
 		{
+
+			if(ev.id=="schedulerselectengines")
+			{
+				scheduler.SelectEngines
+			}
+
+			if(ev.id=="schedulergamesetup")
+			{
+				scheduler.GameSetup
+			}
+
+			if(ev.id=="schedulercreateschedule")
+			{
+				scheduler.CreateSchedule
+			}
+
+			if(ev.id=="schedulershow")
+			{
+				scheduler.Show
+			}
+
+			if(ev.id=="schedulerstart")
+			{
+				scheduler.Start
+			}
+
+			if(ev.id=="schedulerstop")
+			{
+				scheduler.Stop
+			}
 
 			if(ev.id=="enginegamestats")
 			{
@@ -1850,6 +1887,8 @@ class GuiClass extends Application
 		enginelist.Load
 
 		enginelist.SetMultipv(get_multipv,commands.g)
+
+		scheduler.Load
 	}
 
 	def get_selected_engine:String=Builder.getcombo("enginescombo").get_selected
@@ -2366,6 +2405,8 @@ class GuiClass extends Application
 
 		enginelist=GEngineList(Builder.getwebe("enginestext"))
 
+		scheduler=Scheduler(enginelist,enginegames,SelectEngineGamesTab)
+
 		///////////////////////////////////////////////////
 
 		variant_changed
@@ -2375,21 +2416,15 @@ class GuiClass extends Application
 	{
 		println("application stop method")
 
-		print("shutting down command ... ")
-
-		commands.shutdown
-
-		println("done")
-
-		print("shutting down builder ... ")
-
-		Builder.shutdown
-
-		println("done")
-
 		print("shutting down engine games ... ")
 
 		enginegames.ShutDown
+
+		println("done")
+
+		print("shutting down scheduler ... ")
+
+		scheduler.ShutDown
 
 		println("done")
 
@@ -2398,6 +2433,18 @@ class GuiClass extends Application
 		engine.stop_engine_process
 
 		enginelist.UnloadAll
+
+		println("done")
+
+		print("shutting down commands ... ")
+
+		commands.shutdown
+
+		println("done")
+
+		print("shutting down builder ... ")
+
+		Builder.shutdown
 
 		println("done")
 

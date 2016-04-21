@@ -383,9 +383,21 @@ case class EngineGames(
 
 	var initturn:String="white"
 
-	def StartGame(fromposition:Boolean=false)
+	def SchedulerRunningMessage(message:String)
+	{
+		SystemMessage.Show("Scheduler message",message,comment="Scheduler is running.",popup=true,runlater=true)
+	}
+
+	def StartGame(fromposition:Boolean=false,forced:Boolean=false)
 	{
 		if(gamerunning) return
+
+		if((SchedulerGlobals.running)&&(!forced))
+		{
+			SchedulerRunningMessage("Cannot start game.")
+			return
+		}
+
 		gameaborted=false
 		gamecantstart=""
 		if(!SelectPlayers)
@@ -460,10 +472,24 @@ case class EngineGames(
 
 		commands.g.pgn_headers+=("TimeControl"->timecontrolverbalpgn)
 
+		playerwhite.OpenConsole
+		playerblack.OpenConsole
+
+		var firsttimestep=true
+
+		gameresult=null
+
+		gamerunning=true
+
 		gamethread=new Thread(new Runnable{def run{
-			gamerunning=true
-			var cnt=0
 			var interrupted=false
+			if(firsttimestep)
+			{
+				// wait here for consoles to open safely
+				try{Thread.sleep(3000)}catch{case e:Throwable=>{interrupted=true}}
+				firsttimestep=false
+			}			
+			var cnt=0
 			bestmove=null
 			var issuego=true
 			DisableBoardControls()
@@ -476,19 +502,16 @@ case class EngineGames(
 			initturn=turn
 			var onturn=players(turn)
 
-			Platform.runLater(new Runnable{def run{
-				playerwhite.OpenConsole
-				playerblack.OpenConsole
-				onturn.ToTop
-			}})
-
 			gamehistory=GameHistory()
-			gameresult=null
 			plycount=0
 			var stepcnt=0
 			var currentmovesteps=0
 
 			StartThinking(onturn,turn,true)
+
+			Platform.runLater(new Runnable{def run{				
+				onturn.ToTop
+			}})
 
 			while((!Thread.currentThread.isInterrupted())&&(!interrupted)&&(gameresult==null))
 			{
@@ -671,6 +694,13 @@ case class EngineGames(
 	def AbortGame
 	{
 		if(gamethread==null) return
+
+		if(SchedulerGlobals.running)
+		{
+			SchedulerRunningMessage("Cannot abort game.")
+			return
+		}
+
 		if(gamerunning)
 		{
 			gamethread.interrupt()
@@ -929,6 +959,11 @@ case class GEngine(
 			{
 				SetPreferredSize
 			}
+
+			if(ev.id==s"$pathid#setcompactsize")
+			{
+				SetCompactSize
+			}
 		}
 
 		if(ev.kind=="textfield entered")
@@ -959,7 +994,25 @@ case class GEngine(
 		}	
 	}
 
+	def SetCompactSize
+	{
+		if(Builder.stages.contains(pathid))
+		{
+			Builder.stages(pathid).setWidth(520.0)
+			Builder.stages(pathid).setHeight(300.0)
+			Builder.stages(pathid).setY(10.0)
+			return
+		}	
+	}
+
 	def CloseConsole
+	{
+		Platform.runLater(new Runnable{def run{
+			CloseConsoleFunc
+		}})
+	}
+
+	def CloseConsoleFunc
 	{
 		if(Builder.stages.contains(pathid))
 		{
@@ -976,6 +1029,13 @@ case class GEngine(
 	}
 
 	def OpenConsole
+	{
+		Platform.runLater(new Runnable{def run{
+			OpenConsoleFunc
+		}})
+	}
+
+	def OpenConsoleFunc
 	{
 		if(engineprocess==null)
 		{
@@ -1002,7 +1062,8 @@ case class GEngine(
 			|<hbox padding="5" gap="5">
 			|<textfield style="-fx-font-size: 18px; -fx-text-fill: #00007f;" id="$pathid#enginecommand"/>
 			|<button id="$pathid#issueenginecommand" text="Issue" style="round"/>
-			|<button id="$pathid#setpreferredsize" text="Set preferred size" />
+			|<button id="$pathid#setpreferredsize" text="Preferred size" />
+			|<button id="$pathid#setcompactsize" text="Compact size" />
 			|</hbox>
 			|<scrollpane id="engineconsolescrollpane" width="600.0" height="600.0">
 			|<webview id="$pathid#engineconsoletext" height="3000.0" width="3000.0"/>
@@ -2935,6 +2996,23 @@ case class GEngineList(var we:WebEngine=null)
 		{
 			if(engine.autoload) engine.Load
 		}
+	}
+
+	def IndexOfPathId(pathid:String):Int=
+	{
+		var i=0
+		for(engine<-enginelist) if(engine.pathid==pathid) return i else i+=1
+		return -1
+	}
+
+	def BringUp(pathid:String):Boolean=
+	{
+		val i=IndexOfPathId(pathid)
+		if(i< 0) return false
+		ToEdge(i,-1)
+		enginelist(0).Load
+		if(enginelist(0).Loaded) return true
+		false
 	}
 
 	def Load

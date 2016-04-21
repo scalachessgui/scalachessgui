@@ -419,6 +419,11 @@ object Builder
 		Data.gs(values,cvepath(id),default)
 	}
 
+	def gcveb(id:String,default:Boolean):Boolean=
+	{
+		Utils.parse[Boolean](gs(cvepath(id),""),default)
+	}
+
 	def getvevall(v:String,id:String):List[String]=
 	{
 		val data=Data.get(values,vepath(v,id))
@@ -1744,7 +1749,15 @@ object Builder
 
 object SystemMessage
 {
-	def Show(title:String,message:String,comment:String="",id:String="systemmessagedialog")
+	def Show(
+		title:String,
+		message:String,
+		comment:String="",
+		id:String="systemmessagedialog",
+		duration:Int=3000,
+		popup:Boolean=false,
+		runlater:Boolean=false
+	)
 	{
 		val systemmessageblob=s"""
 				|<vbox style="-fx-font-size: 24px; -fx-font-weight: bold;" padding="50" gap="5">
@@ -1752,7 +1765,29 @@ object SystemMessage
 				|<label text="$comment" />
 				|</vbox>
 			""".stripMargin
-		Builder.MyStage(id,modal=true,unclosable=true,set_handler=Builder.default_handler,title=title,blob=systemmessageblob)
+		def ShowStage
+		{
+			Builder.MyStage(id,modal=true,unclosable=true,set_handler=Builder.default_handler,title=title,blob=systemmessageblob)
+		}
+		def CoreFunc
+		{
+			if(popup)
+			{
+				ShowStage
+				Hide(duration,id)
+			}
+			else
+			{
+				ShowStage
+			}
+		}
+		if(runlater)
+		{
+			Platform.runLater(new Runnable{def run{
+				CoreFunc
+			}})
+		}
+		else CoreFunc
 	}
 
 	def Hide(duration:Int=5000,id:String="systemmessagedialog")
@@ -1762,4 +1797,5 @@ object SystemMessage
 			Builder.closeStage(id)
 		}})
 	}
+
 }
