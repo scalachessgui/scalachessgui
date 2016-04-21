@@ -3011,6 +3011,9 @@ case class GEngineList(var we:WebEngine=null)
 		if(i< 0) return false
 		ToEdge(i,-1)
 		enginelist(0).Load
+		Platform.runLater(new Runnable{def run{
+			Update
+		}})
 		if(enginelist(0).Loaded) return true
 		false
 	}

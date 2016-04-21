@@ -167,6 +167,50 @@ case class ScheduleSetupItem(
 	val dummy=new game
 	dummy.reset
 	fen=dummy.report_fen
+
+	def ToData:Data=
+	{
+		MapData(map=Map[String,Data](
+			"fen"->StringData(fen),
+			"thematicmoves"->StringData(thematicmoves)
+		))
+	}
+
+	def ReportHTMLTableRow(i:Int,l:Int):String=
+	{
+		var deletebutton=if((i==0)&&(l>1)) """<input type="button" value="Delete" onclick="command='delete';">""" else ""
+		s"""
+			|<tr>
+			|<td>FEN</td>
+			|<td><font color="#7f0000"><small>$fen</small></font></td>
+			|<td>$deletebutton</td>
+			|</tr>
+			|<tr>
+			|<td>Moves</td>
+			|<td align="center"><font color="#00007f"><b>$thematicmoves</b></font></td>
+			|<td><input type="button" value="Import" onclick="command='import'; param='$i';"></td>
+			|</tr>
+			|<tr>
+			|<td></td>
+			|<td><hr></td>
+			|<td></td>
+			|</tr>
+		""".stripMargin
+	}
+
+	def FromData(data:Data):ScheduleSetupItem=
+	{
+		val map=data.asInstanceOf[MapData].map
+		if(map.contains("fen"))
+		{
+			fen=map("fen").asInstanceOf[StringData].value
+		}
+		if(map.contains("thematicmoves"))
+		{
+			thematicmoves=map("thematicmoves").asInstanceOf[StringData].value
+		}		
+		this
+	}
 }
 
 // ScheduleSetup records the starting conditions from which games should be played
@@ -176,6 +220,11 @@ case class ScheduleSetup(
 {
 	def HasItems:Boolean=( items.length > 0 )
 
+	def ToData:Data=
+	{
+		SeqData(seq=for(item<-items) yield (item.ToData))
+	}
+
 	def Clear
 	{
 		items=List[ScheduleSetupItem]()		
@@ -183,17 +232,121 @@ case class ScheduleSetup(
 
 	def Add(item:ScheduleSetupItem)
 	{
-		items=items:+item
+		items=item+:items
+	}
+
+	def CreateStage
+	{
+		def handler(ev:MyEvent)
+		{		
+			if(ev.kind=="webview clicked")
+			{
+				if(ev.id=="schedulesetuptext")
+				{
+					val we=Builder.getwebe("schedulesetuptext")
+					val command=we.executeScript("command").toString()
+					val param=we.executeScript("param").toString()
+					
+					if(command=="delete")
+					{
+						items=items.tail
+						UpdateScheduleSetup
+					}
+
+					if(command=="add")
+					{
+						Add(ScheduleSetupItem())
+						UpdateScheduleSetup
+					}
+
+					if(command=="import")
+					{
+						val i=param.toInt
+						items(i).fen=commands.g.root.fen
+						items(i).thematicmoves=commands.g.current_line_pgn
+						UpdateScheduleSetup
+					}
+				}
+			}
+		}		
+		val blob=s"""			
+			|<scrollpane id="schedulesetupscrollpane" width="600.0" height="645.0">
+			|<webview id="schedulesetuptext" height="3000.0" width="590.0"/>
+			|</scrollpane>			
+		""".stripMargin
+		Builder.MyStage("schedulesetupstage",modal=false,do_size=false,set_handler=handler,title="Schedule setup",blob=blob)
+	}
+
+	def IsStageOpen:Boolean=Builder.stages.contains("schedulesetupstage")
+
+	def ToTop
+	{
+		if(IsStageOpen)
+		{
+			Builder.stages("schedulesetupstage").ToTop
+		}	
+	}
+
+	def ReportHTML:String=
+	{
+		var i= -1
+		val setupitemscontent=(for(item<-items) yield { i+=1; item.ReportHTMLTableRow(i,items.length) }).mkString("\n")
+		s"""
+			|<script>
+			|var command='';
+			|var param='';
+			|</script>
+			|<table cellpadding="3" cellspacing="3">
+			|<tr>
+			|<td></td>
+			|<td><input type="button" value="Add new setup" onclick="command='add';"></td>
+			|<td></td>
+			|</tr>
+			|$setupitemscontent
+			|</table>
+		""".stripMargin
+	}
+
+	def UpdateScheduleSetup
+	{		
+		Builder.setweb("schedulesetuptext",ReportHTML)
+	}
+
+	def ShowScheduleSetup
+	{
+		
+		if(!IsStageOpen) CreateStage
+		ToTop
+		UpdateScheduleSetup
+	}
+
+	def Save
+	{
+		val data=ToData
+		Builder.setcveval("scheduler#schedulesetup",data)
 	}
 
 	def Load
 	{
-
+		val seqdataobj=Builder.getcveval("scheduler#schedulesetup")
+		if(seqdataobj!=null)
+		{
+			if(seqdataobj.isInstanceOf[SeqData])
+			{				
+				val itemsdata=seqdataobj.asInstanceOf[SeqData].seq.toList
+				items=for(itemdata<-itemsdata) yield ScheduleSetupItem().FromData(itemdata)
+			}
+		}
+		if(items.length<=0)
+		{
+			// need at least one item
+			Add(ScheduleSetupItem())
+		}
 	}
 
 	def ShutDown
 	{
-
+		Save
 	}
 }
 
@@ -265,12 +418,14 @@ case class ScheduleItem(
 		val whitetextcolor=SchedulerGlobals.whitetextcolor
 		val blacktextcolor=SchedulerGlobals.blacktextcolor
 		var style=if(current) "border-style: dotted; border-width: 2px; border-radius: 10px; background-color: #afffaf;" else ""
+		var movelist=thematicmoves
 		s"""
 			|<tr style="$style">
 			|<td><font color="$whitetextcolor">$playerwhitename</font></td>
 			|<td align="center">-</td>
 			|<td><font color="$blacktextcolor">$playerblackname</font></td>
 			|<td align="center"><font color="#00007f">$result</font></td>
+			|<td><small>$movelist</small></td>
 			|</tr>
 		""".stripMargin
 	}
@@ -423,7 +578,7 @@ case class Scheduler(
 
 	def GameSetup
 	{
-
+		schedulesetup.ShowScheduleSetup
 	}
 
 	def handler(ev:MyEvent)
@@ -596,7 +751,18 @@ case class Scheduler(
 								}})
 								try{Thread.sleep(3000)}catch{case e:Throwable=>{}}
 								commands.g.reset
-								enginegames.StartGame(forced=true)
+								val variant=settings.getvariant
+								val fen=current.fen
+								val movelist=current.thematicmoves
+								val pgn=s"""
+									|[FEN "$fen"]
+									|[Variant "$variant"]
+									|
+									|$movelist
+								""".stripMargin								
+								commands.g.set_from_pgn(pgn)
+								commands.g.toend
+								enginegames.StartGame(fromposition=true,forced=true)
 								gamestarted=true
 							}
 							else
