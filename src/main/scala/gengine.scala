@@ -481,6 +481,10 @@ case class EngineGames(
 
 		gamerunning=true
 
+		Platform.runLater(new Runnable{def run{
+			GuiUpdate()
+		}})
+
 		gamethread=new Thread(new Runnable{def run{
 			var interrupted=false
 			if(firsttimestep)

@@ -501,7 +501,7 @@ case class Schedule(
 		val statusbutton=if(running)
 			"""<input type="button" value="Stop" onclick="command='stop';">"""
 			else if(Done)
-			"""<input type="button" value="Create" onclick="command='create';">"""
+			"""Schedule finished."""
 			else
 			"""<input type="button" value="Start" onclick="command='start';">"""
 		s"""
@@ -597,11 +597,7 @@ case class Scheduler(
 				if(command=="start")
 				{
 					Start
-				}
-				if(command=="create")
-				{
-					CreateSchedule
-				}
+				}				
 			}
 		}
 	}
