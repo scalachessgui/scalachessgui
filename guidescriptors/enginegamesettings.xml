@@ -2,5 +2,9 @@
 	<hbox padding="5" gap="15">
 		<label text="Add opening moves to thematic games"/>
 		<checkbox id="addopeningmovestothematicgames"/>
+	</hbox>
+	<hbox padding="5" gap="15">
+		<label text="Never lose on time"/>
+		<checkbox id="neverloseontime"/>
 	</hbox>	
 </vbox>

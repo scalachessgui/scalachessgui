@@ -151,7 +151,7 @@ case class EngineGames(
 		if(gamecantstart!="") return FormatResult(gamecantstart,bcolor="#ffff00")
 		if(gameresult==null) return s"""
 			|<div style="margin-top: 10px; padding: 15px;">
-			|<i>Game in progress ... </i>
+			|<i>Game in progress ... ( ply <b>$plycount</b> ) </i>
 			|</div>
 		""".stripMargin
 		val result=gameresult.resultstr
@@ -528,14 +528,19 @@ case class EngineGames(
 				if(onturn.thinking)
 				{
 					onturn.time-=timestep
+					val neverloseontime=Builder.gcb("neverloseontime",false)
+					if( (onturn.time< 1000) && neverloseontime )
+					{
+						onturn.time=1000
+					}
 					currentmovesteps+=1
 					if(onturn.time<=0)
 					{
 						if(turn=="white")
 						{
-							gameresult=GameResult(-1,"0-1","white lost on time")
+							gameresult=GameResult(-1,"0-1","GUI adjudication: white lost on time")
 						} else {
-							gameresult=GameResult(1,"1-0","black lost on time")
+							gameresult=GameResult(1,"1-0","GUI adjudication: black lost on time")
 						}
 					}
 				}
