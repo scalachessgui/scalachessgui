@@ -1741,8 +1741,23 @@ case class GEngine(
 
 	var bestmove:String=null
 
+	def IsSuperfluousEngineOutput(line:String):Boolean=
+	{
+		if(protocol=="UCI")
+		{
+			if(running||thinking)
+			{
+				if(line.contains("info")&&(!line.contains(" pv "))) return true
+			}
+		}
+		false
+	}
+
 	def ProcessEngineOut(line:String)
 	{
+		// ignore superfluous engine output
+		if(IsSuperfluousEngineOutput(line)) return
+
 		log.Add(LogItem(line,"out"))
 
 		if(startup)

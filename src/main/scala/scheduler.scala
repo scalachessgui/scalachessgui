@@ -141,7 +141,7 @@ case class SelectedEngines(
 
 	def GetSortedPlayerIds:List[String]=
 	{
-		var playerids=items.keys.toList
+		var playerids=(for((k,v)<-items if(v.selected)) yield k).toList
 		playerids.sortWith( items(_).score > items(_).score )
 	}
 
@@ -170,7 +170,8 @@ case class SelectedEngines(
 				items(pathid).SetSelected(ev.value)				
 			}
 		}
-		val itemscontent=(for((k,v)<-items) yield v.reportXML).mkString("\n")
+		val sortedkeys=items.keys.toList.sorted
+		val itemscontent=(for(k<-sortedkeys) yield items(k).reportXML).mkString("\n")
 		val blob=s"""
 			|<vbox padding="5" gap="5" width="400">
 			|$itemscontent
