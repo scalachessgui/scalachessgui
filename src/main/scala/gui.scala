@@ -315,6 +315,7 @@ class GuiClass extends Application
 		pgn_game_browser.update
 
 		selecttab("PGN Games")
+
 	}
 
 	def open_pgn()
@@ -2405,7 +2406,7 @@ class GuiClass extends Application
 
 		enginelist=GEngineList(Builder.getwebe("enginestext"))
 
-		scheduler=Scheduler(enginelist,enginegames,SelectEngineGamesTab)
+		scheduler=Scheduler(enginelist,enginegames,SelectEngineGamesTab,open_mult_pgn)
 
 		///////////////////////////////////////////////////
 

@@ -46,6 +46,18 @@ object SchedulerGlobals
 	var running=false
 
 	def elapsedf:String=formatDuration(elapsed,"HH:mm:ss")
+
+	def IsInt(str:String):Boolean=
+	{
+		if(str==null) return false
+		try
+		{
+			val intvalue=str.toInt
+			return true
+		}
+		catch{case e: Throwable => {}}
+		return false
+	}
 }
 
 // scheduler is used to create a schedule for playing engine games
@@ -273,9 +285,11 @@ case class ScheduleSetupItem(
 
 // ScheduleSetup records the starting conditions from which games should be played
 case class ScheduleSetup(
-	var items:List[ScheduleSetupItem]=List[ScheduleSetupItem]()
+	OpenMultipleGamePgn:()=>Unit
 )
 {
+	var items:List[ScheduleSetupItem]=List[ScheduleSetupItem]()
+
 	def HasItems:Boolean=( items.length > 0 )
 
 	def ToData:Data=
@@ -291,6 +305,12 @@ case class ScheduleSetup(
 	def Add(item:ScheduleSetupItem)
 	{
 		items=item+:items
+	}
+
+	def Reset
+	{
+		Clear
+		Add(ScheduleSetupItem())
 	}
 
 	def CreateStage
@@ -324,6 +344,51 @@ case class ScheduleSetup(
 						items(i).thematicmoves=commands.g.current_line_pgn
 						UpdateScheduleSetup
 					}
+
+					if(command=="deleteall")
+					{
+						Reset
+						UpdateScheduleSetup
+					}
+
+					if(command=="openmult")
+					{
+						OpenMultipleGamePgn()
+						UpdateScheduleSetup
+					}
+
+					if(command=="createmult")
+					{
+						Clear
+						val limit=we.executeScript("""document.getElementById('movelimit').value""").toString()
+						var limitint=Builder.gss("schedulersetupmovelimit","10").toInt
+						if(SchedulerGlobals.IsInt(limit))
+						{
+							limitint=limit.toInt							
+							Builder.setsval("schedulersetupmovelimit",limit)
+						}
+						for(md5<-commands.g.pgn_games)
+						{
+							val path=commands.g.game_path(md5)
+							val f=new File(path)
+							if(f.exists())
+							{
+								val pgn=readFileToString(f,null.asInstanceOf[String])
+								val dummy=new game
+								dummy.set_from_pgn(pgn)
+								dummy.tobegin
+								for(i<- 1 to limitint)
+								{
+									dummy.forward
+								}
+								val fen=dummy.root.fen
+								val movelist=dummy.current_line_pgn
+								Add(ScheduleSetupItem(fen=fen,thematicmoves=movelist))
+							}
+						}
+						if(items.length<=0) Reset
+						UpdateScheduleSetup
+					}
 				}
 			}
 		}		
@@ -349,6 +414,11 @@ case class ScheduleSetup(
 	{
 		var i= -1
 		val setupitemscontent=(for(item<-items) yield { i+=1; item.ReportHTMLTableRow(i,items.length) }).mkString("\n")
+		val numgames=commands.g.pgn_games.length
+		val pgninfo=if(numgames>0) s"Multiple game PGN has $numgames game(s)." else "No multiple game PGN is open."
+		val frommult=if(numgames>0) """<input type="button" value="Create from multiple game PGN" onclick="command='createmult';">""" else ""
+		val limit=Builder.gss("schedulersetupmovelimit","10")
+		val limittext=if(numgames>0) s"""Up to <input id="movelimit" type="text" value="$limit"> plies.""" else ""
 		s"""
 			|<script>
 			|var command='';
@@ -356,10 +426,20 @@ case class ScheduleSetup(
 			|</script>
 			|<table cellpadding="3" cellspacing="3">
 			|<tr>
-			|<td></td>
-			|<td><input type="button" value="Add new setup" onclick="command='add';"></td>
-			|<td></td>
+			|<td><input type="button" value="Open multiple game PGN" onclick="command='openmult';"></td>
+			|<td>$pgninfo</td>
 			|</tr>
+			|<tr>
+			|<td>$frommult</td>
+			|<td>$limittext</td>
+			|</tr>
+			|<tr>
+			|<td><input type="button" value="Add new setup" onclick="command='add';"></td>
+			|<td><input type="button" value="Clear all" onclick="command='deleteall';"></td>
+			|</tr>
+			|</table>
+			|<hr>
+			|<table cellpadding="3" cellspacing="3">
 			|$setupitemscontent
 			|</table>
 		""".stripMargin
@@ -655,12 +735,13 @@ case class Schedule(
 case class Scheduler(
 	enginelist:GEngineList,
 	enginegames:EngineGames,
-	SelectEngineGamesTab:()=>Unit
+	SelectEngineGamesTab:()=>Unit,
+	OpenMultipleGamePgn:()=>Unit
 )
 {
 	var selectedengines=SelectedEngines(enginelist)
 
-	var schedulesetup=ScheduleSetup()
+	var schedulesetup=ScheduleSetup(OpenMultipleGamePgn)
 
 	var schedule=Schedule(selectedengines)
 
@@ -752,6 +833,12 @@ case class Scheduler(
 
 	def CreateSchedule
 	{
+		if(SchedulerGlobals.running)
+		{
+			SystemMessage.Show("Scheduler message","Cannot create schedule.","Scheduler is running.",popup=true,runlater=true)
+			return
+		}
+
 		schedule.Clear
 
 		if(!schedulesetup.HasItems)
