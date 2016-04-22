@@ -60,9 +60,52 @@ object SchedulerGlobals
 case class EngineInfo(
 	var name:String="",
 	var selected:Boolean=false,
-	var pathid:String=""
+	var pathid:String="",
+	var wins:Int=0,
+	var draws:Int=0,
+	var losses:Int=0,
+	var score:Double=0.0
 )
 {
+	def ReportHTMLTableRow:String=
+	{
+		val scoref="%.1f".format(score)
+		s"""
+			|<tr>
+			|<td><font color="#00007f">$name</font></td>
+			|<td align="center"><b>$score</b></td>
+			|<td align="center"><font color="#007f00"><b>$wins</b></font></td>
+			|<td align="center"><font color="#00007f"><b>$draws</b></font></td>
+			|<td align="center"><font color="#7f0000"><b>$losses</b></font></td>
+			|</tr>
+		""".stripMargin
+	}
+
+	def ClearResults
+	{
+		wins=0
+		draws=0
+		losses=0
+		score=0.0
+	}
+
+	def IncWins
+	{
+		wins+=1
+		score+=1.0
+	}
+
+	def IncLosses
+	{
+		losses+=1
+	}
+
+	def IncDraws
+	{
+		draws+=1
+		score+=0.5
+	}
+
 	def SetSelected(value:String)
 	{
 		selected=if(value=="true") true else false
@@ -96,14 +139,27 @@ case class SelectedEngines(
 {
 	var items=Map[String,EngineInfo]()
 
+	def GetSortedPlayerIds:List[String]=
+	{
+		var playerids=items.keys.toList
+		playerids.sortWith( items(_).score > items(_).score )
+	}
+
 	def ToData:Data=
 	{
 		MapData(map=for((k,v)<-items) yield (k->v.ToData))
 	}
 
+	def ClearResults
+	{
+		Synchronize
+		for((k,v)<-items) v.ClearResults
+	}
+
 	// Query opens a modal dialog in which the user can select and deselect engines
 	def Query
 	{
+		Synchronize
 		def handler(ev:MyEvent)
 		{
 			if(ev.kind=="checkbox changed")
@@ -143,6 +199,7 @@ case class SelectedEngines(
 
 	def Save
 	{
+		Synchronize
 		val data=ToData
 		Builder.setcveval("scheduler#selectedengines",data)
 	}
@@ -433,11 +490,13 @@ case class ScheduleItem(
 
 // Schedule is a list of games that has to be played
 case class Schedule(
-	var items:List[ScheduleItem]=List[ScheduleItem](),
-	// ptr points to the game that has to be played
-	var ptr:Int=0
+	var selectedengines:SelectedEngines
 )
 {
+
+	var items:List[ScheduleItem]=List[ScheduleItem]()
+	// ptr points to the game that has to be played
+	var ptr:Int=0
 
 	def Done:Boolean=(ptr >= items.length)
 
@@ -497,11 +556,11 @@ case class Schedule(
 		val pairingscontent=pairings.mkString("\n")
 		val running=SchedulerGlobals.running
 		val timef=SchedulerGlobals.elapsedf
-		val status=if(running) s"Running $timef" else "Stopped"
+		val status=if(running) s"Running: $timef" else "Stopped."
 		val statusbutton=if(running)
 			"""<input type="button" value="Stop" onclick="command='stop';">"""
 			else if(Done)
-			"""Schedule finished."""
+			"""Schedule finished. <input type="button" value="Create new schedule" onclick="command='create';">"""
 			else
 			"""<input type="button" value="Start" onclick="command='start';">"""
 		s"""
@@ -533,8 +592,43 @@ case class Schedule(
 
 	def ReportStandingsHTML:String=
 	{
+		selectedengines.ClearResults
+		for(item<-items)
+		{
+			val white=item.playerwhitename
+			val black=item.playerblackname
+			val whiteid=item.playerwhitepathid
+			val blackid=item.playerblackpathid
+			if(item.result=="1-0")
+			{
+				selectedengines.items(whiteid).IncWins
+				selectedengines.items(blackid).IncLosses
+			}
+			else if(item.result=="0-1")
+			{
+				selectedengines.items(whiteid).IncLosses
+				selectedengines.items(blackid).IncWins
+			}
+			else if(item.result=="1/2-1/2")
+			{
+				selectedengines.items(whiteid).IncDraws
+				selectedengines.items(blackid).IncDraws
+			}
+		}
+		var sortedplayerids=selectedengines.GetSortedPlayerIds
+		val standingscontent=(for(playerid<-sortedplayerids) yield
+			selectedengines.items(playerid).ReportHTMLTableRow).mkString("\n")
 		s"""
-			|
+			|<table cellpadding="5" cellspacing="5" border="1">
+			|<tr>
+			|<td>Name</td>
+			|<td>Score</td>
+			|<td>Wins</td>
+			|<td>Draws</td>
+			|<td>Losses</td>
+			|</tr>
+			|$standingscontent
+			|</table>
 		""".stripMargin
 	}
 
@@ -567,7 +661,7 @@ case class Scheduler(
 
 	var schedulesetup=ScheduleSetup()
 
-	var schedule=Schedule()
+	var schedule=Schedule(selectedengines)
 
 	var scheduler_thread:Thread=null
 
@@ -597,7 +691,11 @@ case class Scheduler(
 				if(command=="start")
 				{
 					Start
-				}				
+				}
+				if(command=="create")
+				{
+					CreateSchedule
+				}
 			}
 		}
 	}

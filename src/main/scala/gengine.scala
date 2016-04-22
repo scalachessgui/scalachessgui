@@ -2883,6 +2883,16 @@ case class GEngineList(var we:WebEngine=null)
 		while(Move(i,dir)){i+=dir}
 	}
 
+	def Renumber
+	{
+		var i=0
+		for(engine<-enginelist)
+		{
+			engine.SetId(i)
+			i+=1
+		}
+	}
+
 	def Handle
 	{
 		val command=we.executeScript("command").toString()
@@ -2904,7 +2914,8 @@ case class GEngineList(var we:WebEngine=null)
 
 		if(command=="add")
 		{
-			enginelist=enginelist:+GEngine(enginelist.length,set_handler=handler)
+			enginelist=GEngine(0,set_handler=handler)+:enginelist
+			Renumber
 			Update
 		}
 

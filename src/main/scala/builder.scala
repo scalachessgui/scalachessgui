@@ -299,7 +299,7 @@ object Builder
 		val cc=getcheck(id)
 		if(cc==null) return
 		cc.set_gui_value(StringData(""+value))
-		setcval_safe(id,""+value)
+		cc.mysetcval_safes(id,""+value)
 	}
 
 	def setbuttontext(id:String, what:String)=
@@ -503,6 +503,20 @@ object Builder
 		setval(cvepath(id),what)
 	}
 
+	def setcveval_safes(id:String,what:String)
+	{
+		if((id=="")||(what==null)) return
+
+		setval(cvepath(id),what)
+	}
+
+	def setcveval_safed(id:String,what:Data)
+	{
+		if((id=="")||(what==null)) return
+
+		setval(cvepath(id),what)
+	}
+
 	def setcvevals(id:String,what:String)
 	{
 		setval(cvepath(id),StringData(what))
@@ -547,14 +561,14 @@ object Builder
 		setval(ppath(profileid,name,id),what)
 	}
 
-	def setcval_safe(id:String,what:String)
+	def setcval_safes(id:String,what:String)
 	{
 		if((id=="")||(what==null)) return
 
 		setval(cpath(id),what)
 	}
 
-	def setcval_safe(id:String,what:Data)
+	def setcval_safed(id:String,what:Data)
 	{
 		if((id=="")||(what==null)) return
 
@@ -837,6 +851,10 @@ object Builder
 		var id=""
 		var profile=""
 		var action=""
+		var usevariantentry=false
+		var mysetcval:(String,Data)=>Unit=setcval
+		var mysetcval_safes:(String,String)=>Unit=setcval_safes
+		var mysetcval_safed:(String,Data)=>Unit=setcval_safed
 		var properties=Map[String,String]()
 		var parent:MyComponent=null
 		var children=Seq[MyComponent]()
@@ -974,8 +992,30 @@ object Builder
 
 			/////////////////////////////////////
 
+			if(id!="")
+			{
+				
+				if(properties.contains("usevariantentry"))
+				{
+					usevariantentry=true
+					mysetcval=setcveval
+					mysetcval_safes=setcveval_safes
+					mysetcval_safed=setcveval_safed
+
+					val cveval=getcveval(id)
+					set_gui_value_safe(cveval)
+				}
+				else
+				{
+					val cval=getcval(id)
+					set_gui_value_safe(cval)
+				}
+
+			}
+
 			if((profile!="")&&(id!=""))
 			{
+
 				val p=get_profile(profile)
 
 				p.handler=handler
@@ -1002,21 +1042,9 @@ object Builder
 				{
 					val sval=getsval(id)
 
-					setcval_safe(id,sval)
+					mysetcval_safed(id,sval)
 				}
-			}
 
-			if(id!="")
-			{
-				val cval=getcval(id)
-
-				set_gui_value_safe(cval)
-
-				if(properties.contains("usevariantentry"))
-				{
-					val cveval=getcveval(id)
-					set_gui_value_safe(cveval)
-				}
 			}
 
 			/////////////////////////////////////
@@ -1201,7 +1229,7 @@ object Builder
 
 						if(sel!="")
 						{
-							setcval_safe(s"$id#selected",sel)
+							mysetcval_safes(s"$id#selected",sel)
 
 							if((profile!="")&&(action=="select"))
 							{
@@ -1231,7 +1259,7 @@ object Builder
 		{
 			add(what)
 			val itemsdata=Data.fromList(items)
-			setcval_safe(s"$id#items",itemsdata)
+			mysetcval_safed(s"$id#items",itemsdata)
 		}
 
 		def del(what:String)
@@ -1305,7 +1333,7 @@ object Builder
 
 						val val_str=GuiUtils.colorToHex(col)
 
-						setcval_safe(id,val_str)
+						mysetcval_safes(id,val_str)
 
 						handler(MyEvent(id,"color picked",val_str))
 					}
@@ -1395,7 +1423,7 @@ object Builder
 					{
 						val new_val_str=new_val.toString()					
 
-						setcval_safe(id,new_val_str)
+						mysetcval_safes(id,new_val_str)
 
 						handler(MyEvent(id,"slider changed",new_val_str))
 					}
@@ -1492,7 +1520,7 @@ object Builder
 				{
 					if(trigger)
 					{
-						setcval_safe(id,""+new_val)
+						mysetcval_safes(id,""+new_val)
 
 						handler(MyEvent(id,"checkbox changed",""+new_val))
 					}
