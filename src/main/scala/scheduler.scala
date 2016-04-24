@@ -146,7 +146,7 @@ case class EngineInfo(
 
 // SelectedEngines keeps track of engines selected for playing games
 case class SelectedEngines(
-	enginelist:GEngineList
+	enginelist:GEngineList=GEngineList()
 )
 {
 	var items=Map[String,EngineInfo]()
@@ -496,9 +496,18 @@ case class ScheduleItem(
 	var playerblackname:String="",
 	var fen:String="",
 	var thematicmoves:String="",
-	var result:String="*"
+	var result:String="*",
+	var enabled:String="+"
 )
 {
+	def IsDisabled:Boolean=(enabled=="-")
+	def IsEnabled:Boolean=(enabled=="+")
+
+	def Toggle
+	{
+		enabled=if(enabled=="+") "-" else "+"
+	}
+
 	def ToData:Data=
 	{
 		MapData(map=Map[String,Data](
@@ -508,7 +517,8 @@ case class ScheduleItem(
 			"playerblackname"->StringData(playerblackname),
 			"fen"->StringData(fen),
 			"thematicmoves"->StringData(thematicmoves),
-			"result"->StringData(result)
+			"result"->StringData(result),
+			"enabled"->StringData(enabled)
 		))
 	}
 
@@ -543,6 +553,10 @@ case class ScheduleItem(
 		{
 			result=map("result").asInstanceOf[StringData].value
 		}
+		if(map.contains("enabled"))
+		{
+			enabled=map("enabled").asInstanceOf[StringData].value
+		}
 		this
 	}
 
@@ -551,14 +565,26 @@ case class ScheduleItem(
 		result=set_result
 	}
 
-	def ReportHTMLTableRow(current:Boolean):String=
+	def ReportHTMLTableRow(i:Int=0,ptr:Int=0,hidedisabled:Boolean=false):String=
 	{
+		val current=(i==ptr)
 		val whitetextcolor=SchedulerGlobals.whitetextcolor
 		val blacktextcolor=SchedulerGlobals.blacktextcolor
-		var style=if(current) "border-style: dotted; border-width: 2px; border-radius: 10px; background-color: #afffaf;" else ""
+		var background=if(current)
+		{
+			if(IsEnabled) "#afffaf" else "#efefef"
+		} else {
+			if(IsEnabled) "#ffffff" else "#cfcfcf"
+		}
+		if(hidedisabled) background="#ffffff"
+		var border=if(current) "border-style: dotted; border-width: 2px; border-radius: 10px;" else ""
+		var style=s"background-color: $background; $border"
 		var movelist=thematicmoves
+		var enablebutton=if(hidedisabled) "" else
+			s"""<input type="button" value="$enabled" onclick="command='toggle';param=$i;">"""
 		s"""
 			|<tr style="$style">
+			|<td>$enablebutton</td>
 			|<td><font color="$whitetextcolor">$playerwhitename</font></td>
 			|<td align="center">-</td>
 			|<td><font color="$blacktextcolor">$playerblackname</font></td>
@@ -571,7 +597,7 @@ case class ScheduleItem(
 
 // Schedule is a list of games that has to be played
 case class Schedule(
-	var selectedengines:SelectedEngines
+	var selectedengines:SelectedEngines=SelectedEngines()
 )
 {
 
@@ -583,6 +609,24 @@ case class Schedule(
 
 	def Current:ScheduleItem=(if(Done) null else items(ptr))
 
+	def PairingEnabled(wpid:String,bpid:String):String=
+	{
+		for(item<-items)
+		{
+			if((item.playerwhitepathid==wpid)&&(item.playerblackpathid==bpid))
+			{
+				return item.enabled
+			}
+		}
+		"+"
+	}
+
+	def Toggle(i:Int)
+	{
+		items(i).Toggle
+		Save
+	}
+
 	def ToData:Data=
 	{
 		val itemsdata=SeqData(seq=for(item<-items) yield (item.ToData))
@@ -593,11 +637,12 @@ case class Schedule(
 	{
 		val data=ToData
 		Builder.setcveval("scheduler#schedule",data)
+		Builder.setcveval("scheduler#scheduletemplate",data)
 	}
 
-	def Load
+	def Load(path:String="scheduler#schedule")
 	{
-		val mapdataobj=Builder.getcveval("scheduler#schedule")
+		val mapdataobj=Builder.getcveval(path)
 		if(mapdataobj!=null)
 		{
 			if(mapdataobj.isInstanceOf[MapData])
@@ -618,10 +663,25 @@ case class Schedule(
 
 	def Advance
 	{
-		if(!Done) ptr+=1
+		if(Done) return
+		var found=false
+		while( (!Done) && (!found) )
+		{
+			ptr+=1
+			if(!Done) found=items(ptr).IsEnabled
+		}
 	}
 
-	def ReportScheduleHTML(set_from:Int,set_to:Int,reverse:Boolean=false):String=
+	def GetEnabled
+	{
+		while(!Done)
+		{
+			if(items(ptr).IsEnabled) return
+			Advance
+		}
+	}
+
+	def ReportScheduleHTML(set_from:Int,set_to:Int,reverse:Boolean=false,hidedisabled:Boolean=false):String=
 	{
 		var pairings=List[String]()
 
@@ -631,35 +691,40 @@ case class Schedule(
 		if(to>items.length-1) to=items.length-1
 		if((items.length>0)&&(to>=from)) for(i<- from to to)
 		{
-			pairings=pairings:+items(i).ReportHTMLTableRow(current=(i==ptr))
+			pairings=pairings:+items(i).ReportHTMLTableRow(i,ptr,hidedisabled)
 		}
 		if(reverse) pairings=pairings.reverse
 		val pairingscontent=pairings.mkString("\n")
 		val running=SchedulerGlobals.running
 		val timef=SchedulerGlobals.elapsedf
-		val status=if(running) s"Running: $timef" else "Stopped."
+		val status=if(running) s"<small>Running: $timef</small>" else "<small>Stopped.</small>"
 		val statusbutton=if(running)
 			"""<input type="button" value="Stop" onclick="command='stop';">"""
 			else if(Done)
 			"""Schedule finished. <input type="button" value="Create new schedule" onclick="command='create';">"""
 			else
 			"""<input type="button" value="Start" onclick="command='start';">"""
+		var toggleheading=if(hidedisabled) "" else "Toggle"
 		s"""
 			|<script>
 			|var command='';
+			|var param='';
 			|</script>
 			|<table cellpadding="5" cellspacing="5">
 			|<tr>
+			|<td></td>
 			|<td>$status</td>
 			|<td>$statusbutton</td>
 			|</tr>
 			|</table>
 			|<table cellpadding="5" cellspacing="5" style="border-collapse: collapse;">
 			|<tr>
-			|<td>White</td>
+			|<td><small>$toggleheading</small></td>
+			|<td><small>White</small></td>
 			|<td></td>
-			|<td>Black</td>
-			|<td>Result</td>
+			|<td><small>Black</small></td>
+			|<td><small>Result</small></td>
+			|<td><small>Opening</small></td>
 			|</tr>
 			|$pairingscontent
 			|</table>
@@ -668,7 +733,7 @@ case class Schedule(
 
 	def ReportResultsHTML:String=
 	{
-		ReportScheduleHTML(0,ptr-1,true)
+		ReportScheduleHTML(0,ptr-1,true,true)
 	}
 
 	def ReportStandingsHTML:String=
@@ -765,6 +830,7 @@ case class Scheduler(
 			{
 				val we=Builder.getwebe("scheduletext")
 				val command=we.executeScript("command").toString()
+				val param=we.executeScript("param").toString()
 				
 				if(command=="stop")
 				{
@@ -778,6 +844,13 @@ case class Scheduler(
 				{
 					CreateSchedule
 				}
+				if(command=="toggle")
+				{
+					schedule.Toggle(param.toInt)
+					Platform.runLater(new Runnable{def run{
+						UpdateSchedule
+					}})
+				}				
 			}
 		}
 	}
@@ -847,6 +920,9 @@ case class Scheduler(
 			schedulesetup.Add(ScheduleSetupItem())
 		}
 
+		val template=Schedule()
+		template.Load("scheduler#scheduletemplate")
+
 		// add schedule for every starting condition
 		for(setupitem<-schedulesetup.items)
 		{
@@ -861,21 +937,24 @@ case class Scheduler(
 					{
 						// only selected engine should take part
 						if((playerwhite.selected)&&(playerblack.selected))
-						{							
+						{
+							val enabled=template.PairingEnabled(playerwhite.pathid,playerblack.pathid)
 							val scheduleitem=ScheduleItem(
 								playerwhitepathid=playerwhite.pathid,
 								playerwhitename=playerwhite.name,
 								playerblackpathid=playerblack.pathid,
 								playerblackname=playerblack.name,
 								fen=setupitem.fen,
-								thematicmoves=setupitem.thematicmoves
+								thematicmoves=setupitem.thematicmoves,
+								enabled=enabled
 							)
-							schedule.Add(scheduleitem)							
-						}
+							schedule.Add(scheduleitem)				}
 					}
 				}
 			}
 		}
+
+		schedule.Save
 
 		ShowSchedule
 	}
@@ -996,6 +1075,8 @@ case class Scheduler(
 			return
 		}
 
+		schedule.GetEnabled
+
 		ShowSchedule
 
 		scheduler_thread=new Thread(new Runnable{def run{
@@ -1031,7 +1112,7 @@ case class Scheduler(
 
 		schedulesetup.Load
 
-		schedule.Load
+		schedule.Load()
 	}
 
 	def ShutDown
