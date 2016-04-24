@@ -1127,7 +1127,7 @@ class game
 			return
 		}
 
-		val manifest_str=readFileToString(f)
+		val manifest_str=readFileToString(f,null.asInstanceOf[String])
 
 		val manifest=manifest_str.split("\n")
 

@@ -400,7 +400,7 @@ class GuiClass extends Application
 				try
 				{					
 
-					writeStringToFile(f,commands.g.report_pgn)
+					writeStringToFile(f,commands.g.report_pgn,null.asInstanceOf[String])
 
 				}
 				catch
@@ -1856,7 +1856,7 @@ class GuiClass extends Application
 		|</vbox>
 		|</vbox>
 		""".stripMargin
-		writeStringToFile(new File("guidescriptors"+File.separator+"engineoptions.xml"),xml)
+		writeStringToFile(new File("guidescriptors"+File.separator+"engineoptions.xml"),xml,null.asInstanceOf[String])
 
 		// end uci
 
