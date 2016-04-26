@@ -44,6 +44,8 @@ import game._
 import gui2.Engine
 import gui2.Robot
 
+import utils.HeapSize._
+
 ////////////////////////////////////////////////////////////////////
 
 class GuiClass extends Application
@@ -2384,6 +2386,33 @@ class GuiClass extends Application
 		Builder.getvbox("currentbookvbox").addChild(current_book_ecombo.n)
 	}
 
+	var system_thread:Thread=null
+
+	def start_system_thread
+	{
+		if(system_thread!=null) return
+		println("starting system thread")
+		system_thread=new Thread(new Runnable{def run{
+			println("system thread started")
+			while(!Thread.currentThread().isInterrupted())
+			{
+				try{Thread.sleep(5000)}catch{case e:Throwable=>{Thread.currentThread().interrupt()}}
+				Platform.runLater(new Runnable{def run{
+					Builder.setltext("heaplabel",heapsize)
+				}})
+			}
+			println("system thread stopped")
+		}})
+		system_thread.start()
+	}
+
+	def stop_system_thread
+	{
+		if(system_thread==null) return
+		println("stopping system thread")
+		system_thread.interrupt()
+	}
+
 	override def start(set_primaryStage: Stage)
 	{
 		gui2.Board.init_move_table
@@ -2411,6 +2440,8 @@ class GuiClass extends Application
 		///////////////////////////////////////////////////
 
 		variant_changed
+
+		start_system_thread
 	}
 
 	override def stop()
@@ -2436,6 +2467,8 @@ class GuiClass extends Application
 		enginelist.UnloadAll
 
 		println("done")
+
+		stop_system_thread
 
 		print("shutting down commands ... ")
 

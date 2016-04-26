@@ -64,8 +64,11 @@
 			<vbox>
 			
 				<vbox id="boardvbox"/>
-				
-				<label id="boardfenlabel"/>
+		
+				<hbox gap="5">			
+					<label id="boardfenlabel"/>
+					<label id="heaplabel"/>
+				</hbox>
 				
 				<hbox id="boardcontrolpanelhbox" bimage="control.jpg" cover="false" gap="3" padding="5">
 					<button id="boardcontrolpanelflip" img="icons/flip.png" style="round"/>

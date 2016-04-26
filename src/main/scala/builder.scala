@@ -245,6 +245,15 @@ object Builder
 		null
 	}
 
+	def setltext(id:String,what:String)
+	{
+		val l=getlabel(id)
+		if(l!=null)
+		{
+			l.setText(what)
+		}
+	}
+
 	def gettext(id:String):MyTextField=
 	{
 		val comp=getcomp(id)
