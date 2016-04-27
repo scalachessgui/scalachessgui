@@ -992,7 +992,7 @@ case class Scheduler(
 								schedule.Advance
 							}
 							gamestarted=false
-							try{Thread.sleep(8000)}catch{case e:Throwable=>{}}
+							try{Thread.sleep(20000)}catch{case e:Throwable=>{}}
 						}
 					}
 					else
@@ -1010,7 +1010,7 @@ case class Scheduler(
 								Platform.runLater(new Runnable{def run{
 									SelectEngineGamesTab()
 								}})
-								try{Thread.sleep(3000)}catch{case e:Throwable=>{}}
+								try{Thread.sleep(8000)}catch{case e:Throwable=>{}}
 								commands.g.reset
 								val variant=settings.getvariant
 								val fen=current.fen

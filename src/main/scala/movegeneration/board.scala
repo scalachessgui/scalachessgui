@@ -714,7 +714,7 @@ class board
 		false
 	}
 
-	def isAlgebLegal(algeb:String):Boolean=
+	def isAlgebLegal(algeb:String,test:Boolean=false):Boolean=
 	{
 		val m=move(fromalgeb=algeb)
 
@@ -723,19 +723,36 @@ class board
 
 		val dummy=this.cclone
 
+		dummy.initMoveGen
+
 		dummy.currentSq=m.from
 
 		if(!dummy.setCurrentPtr(m.from,rep(m.from))) return false
 
 		var ok=true
 
+		if(test) { println("testing moves"); println(toPrintable) }
+
 		while(dummy.nextLegalMove&&ok)
 		{
 			ok=(dummy.currentSq==m.from)
 			if(ok)
 			{
-				if(dummy.current_move.toAlgeb==algeb) return true
+				val calgeb=dummy.current_move.toAlgeb
+				if(test) println("calgeb "+calgeb+" algeb "+algeb)
+				if(calgeb==algeb) return true
 			}
+		}
+
+		dummy.currentSq=NO_SQUARE
+
+		if(test) println("testing castling")
+
+		while(dummy.nextLegalMove)
+		{
+			val calgeb=dummy.current_move.toAlgeb
+			if(test) println("calgeb "+calgeb+" algeb "+algeb)
+			if(calgeb==algeb) return true
 		}
 
 		false

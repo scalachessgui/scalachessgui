@@ -483,6 +483,7 @@ case class EngineGames(
 
 		Platform.runLater(new Runnable{def run{
 			GuiUpdate()
+			Update(UpdateGameStatus)
 		}})
 
 		gamethread=new Thread(new Runnable{def run{
@@ -490,7 +491,7 @@ case class EngineGames(
 			if(firsttimestep)
 			{
 				// wait here for consoles to open safely
-				try{Thread.sleep(3000)}catch{case e:Throwable=>{interrupted=true}}
+				try{Thread.sleep(10000)}catch{case e:Throwable=>{interrupted=true}}
 				firsttimestep=false
 			}			
 			var cnt=0
@@ -2522,8 +2523,9 @@ case class GEngine(
 			val algebparts=pv.split(" ")
 			var first=true
 			bestmovesan=algebparts(0)
-			for(algeb<-algebparts)
+			for(uci<-algebparts)
 			{
+				val algeb=dummy.b.to_chess960_algeb(uci)
 				if(dummy.b.isAlgebLegal(algeb))
 				{
 					val m=move(fromalgeb=algeb)
