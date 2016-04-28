@@ -38,6 +38,21 @@ import java.util.Date
 
 ////////////////////////////////////////////////////////////////////
 
+object WebViewLoader
+{
+	var loadcnt=0
+	def Load(e:WebEngine,content:String)
+	{
+		loadcnt+=1
+		if((loadcnt%600)==0)
+		{
+			// release history from time to time
+			e.load("about:blank")
+		}
+		e.loadContent(content)
+	}
+}
+
 case class EngineGames(
 	DisableBoardControls:()=>Unit,
 	EnableBoardControls:()=>Unit,
@@ -164,7 +179,7 @@ case class EngineGames(
 		Platform.runLater(new Runnable{def run{
 			val we=Builder.getwebe(s"enginegamestext")
 			if(we==null) return
-			we.loadContent(content)
+			WebViewLoader.Load(we,content)
 		}})
 	}
 
@@ -1819,7 +1834,7 @@ case class GEngine(
 	{
 		val cwe=Builder.getwebe(s"$pathid#engineconsoletext")
 		if(cwe==null) return
-		cwe.loadContent(content)
+		WebViewLoader.Load(cwe,content)
 	}
 
 	case class Log(buffersize:Int=1000)
@@ -2772,7 +2787,7 @@ case class GEngine(
 		{
 			val cwe=Builder.getwebe(s"$pathid#engineouttext")
 			if(cwe==null) return
-			cwe.loadContent(content)
+			WebViewLoader.Load(cwe,content)
 		}
 
 		def ParseLine(line:String)
@@ -3007,7 +3022,7 @@ case class GEngineList(var we:WebEngine=null)
 		Save
 		val content=ReportHTML
 		val st=we.executeScript("document.body.scrollTop").toString().toDouble
-		we.loadContent(content)
+		WebViewLoader.Load(we,content)
 		we.getLoadWorker().stateProperty().addListener(new ChangeListener[State]{
 	        def changed(ov: ObservableValue[_ <: State], oldState: State, newState: State)
 	        {

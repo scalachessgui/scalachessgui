@@ -341,11 +341,18 @@ object Builder
 		web.getEngine()
 	}
 
+	var setwebcnt=0
 	def setweb(id:String,content:String)
 	{
 		val web=getweb(id)
 		if(web!=null)
 		{
+			setwebcnt+=1
+			if((setwebcnt%300)==0)
+			{
+				// release history from time to time
+				web.getEngine().load("about:blank")
+			}
 			web.getEngine().loadContent(content)
 		}
 	}
